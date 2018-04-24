@@ -1,0 +1,16 @@
+/** CSS for ActivityView */
+
+.component {
+    font: inherit;
+}
+
+.detailHeader {
+    padding-bottom: 5px;
+}
+
+.description {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow: hidden;
+    overflow-y: auto;
+}

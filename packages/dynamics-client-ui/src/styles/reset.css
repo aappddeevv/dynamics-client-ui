@@ -1,0 +1,131 @@
+body,
+button,
+input,
+select,
+table,
+textarea {
+    /* TODO: Switch to use this syntax once relatvive font sizes(e.g. 200%, larger) 
+       are removed or set thier own line height, since they don't work well with the default line height */
+    /* font: @DefaultFont; */
+    font-style: normal;
+    font-variant: normal;
+    font-weight: normal;
+    font-size: 14px;
+    font-family: 'SegoeUI', 'Segoe UI';
+}
+html {
+    font-size: 14px;
+}
+body {
+    background: #ffffff;
+    color: #666666;
+}
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+nav,
+section,
+summary {
+    display: block;
+}
+a,
+address,
+article,
+aside,
+audio,
+b,
+blockquote,
+body,
+canvas,
+caption,
+cite,
+code,
+dd,
+del,
+details,
+dfn,
+dialog,
+div,
+dl,
+dt,
+em,
+embed,
+fieldset,
+figcaption,
+figure,
+footer,
+form,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+header,
+hgroup,
+hr,
+html,
+i,
+iframe,
+img,
+ins,
+kbd,
+label,
+legend,
+li,
+mark,
+meter,
+nav,
+object,
+ol,
+optgroup,
+option,
+output,
+p,
+pre,
+progress,
+q,
+section,
+small,
+span,
+strong,
+sub,
+summary,
+sup,
+table,
+tbody,
+td,
+textarea,
+tfoot,
+th,
+thead,
+time,
+tr,
+u,
+ul,
+var,
+video {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+th,
+td,
+caption {
+    font-weight: normal;
+    text-align: left;
+    vertical-align: top;
+}
+button::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+}

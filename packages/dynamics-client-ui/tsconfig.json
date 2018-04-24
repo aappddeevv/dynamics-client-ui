@@ -1,0 +1,37 @@
+{
+    "compilerOptions": {
+        "jsx": "react"
+        ,"strictNullChecks": true
+	      ,"importHelpers": true 
+	      ,"noEmitHelpers": true 
+	      ,"experimentalDecorators": true
+	      ,"emitDecoratorMetadata": false,
+	//                      "esModuleInterop": true,
+	"allowSyntheticDefaultImports": true,
+        "inlineSourceMap": false
+        ,"sourceMap": true
+	      ,"noEmitOnError": false
+        ,"moduleResolution": "node"
+	      ,"module": "commonjs"
+        ,"target": "es2015"
+        ,"lib": ["dom", "esnext"]
+	      ,"declaration": true
+        ,"baseUrl": "."
+        ,"paths": {
+            "BuildSettings": [
+                "./BuildSettings.empty"
+            ]
+	    ,"es6-promise-pool": [ "./typings/es6-promise-pool"]
+        }
+        ,"traceResolution": false
+    }
+    ,"exclude": [
+	      "node_modules",
+        "dist"
+	      ,"**/*.spec.ts"
+	      ,"**/*.test.ts"
+	      ,"**/*.spec.js"
+        ,"**/*.test.js"	
+    ]
+    ,"include": ["src/**/*", "typings/**/*.d.ts"]
+}

@@ -1,0 +1,30 @@
+:root {
+    --headers1-height: 42;
+    --headers2-height: 40;
+    --headers: calc(var(--headers1-height) + var(--headers2-height))
+}
+
+.component {
+    font: inherit;
+    font-size: 12px;
+}
+
+.calendar {
+    padding-right: 20px;
+    overflow: hidden;
+ }
+
+.controlPanel {
+    min-width: 400px;
+}
+
+.pivotItemChild {
+    padding-top: 20px;
+    height: calc(100% - calc(var(--headers) * 1px))
+}
+
+.detailDisplay {
+}
+
+.userSelection {
+}

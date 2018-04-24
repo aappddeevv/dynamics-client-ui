@@ -1,0 +1,42 @@
+/*
+   Assumes html div/list and class layout of:
+   crmPanel
+   + panelHeader
+   + panelContent
+ */
+
+.crmPanel {
+    font-weight: normal;
+    text-decoration: none;
+    font-style: normal;
+    font-family:Segoe\000020UI;
+    font-size: 12px;
+    height: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+
+.crmPanel .panelHeader, .crmPanel .panelFooter {
+    flex: none;
+}
+
+.crmPanel .panelHeader{
+    line-height: 24px;
+    border-bottom: 1px solid rgb(214,214,214);
+    border-top: 1px solid rgb(214,214,214);
+}
+
+.crmPanel .panelContent {
+    top-margin: 4px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    whitespace: nowrap;
+    flex: auto;
+}
+
+.crmPanel .panelFooter {
+    border-top: 1px solid rgb(214,214,214);
+}

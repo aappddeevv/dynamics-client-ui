@@ -1,0 +1,19 @@
+{
+    "sourceMaps": true,
+    "presets": [
+        [
+            "env",
+            {
+                "targets": {
+                }
+            }
+        ],
+        "react",
+        "stage-2"
+    ],
+    "plugins": [
+        "transform-runtime",
+        "transform-decorators",
+        "transform-object-rest-spread"
+     ]
+}

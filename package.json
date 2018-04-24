@@ -1,0 +1,14 @@
+{
+    "name": "dynamics-client-ui-repo",
+    "version": "0.1.0",
+    "description": "Reusable utilities and React components for building great Dynamics user experiences.",
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/aappddeevv/dynamic-client-ui"
+    },
+    "license": "MIT",
+    "scripts": {},
+    "dependencies": {
+        "pnpm": "^1.35.7",
+    }
+}

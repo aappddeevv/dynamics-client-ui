@@ -1,0 +1,26 @@
+/** CrmList CSS */
+
+ul.crmList {
+    font: inherit;
+    list-style: none;
+    padding: 0px;
+    margin: 0px;
+    cursor: pointer;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.crmList li {
+    overflow: hidden;
+    /** if pure text this may apply, not sure */
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.crmList li.selected {
+    background: rgb(177,214,240);
+}
+
+.crmList li:hover {
+    background: #d7ebf9
+}

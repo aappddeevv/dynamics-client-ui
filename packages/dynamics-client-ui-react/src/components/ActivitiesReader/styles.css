@@ -1,0 +1,66 @@
+/* ActivitiesReader CSS */
+:root {
+    --headers1-height: 42;
+    --headers2-plug: 0;
+    --footer-height: 13;
+    --headers: calc(var(--headers1-height) + var(--headers2-plug));
+    --body-height: calc(var(--headers) + var(--footer-height));
+    --scrollbar-height: 17;
+    --fontSize: 14;
+}
+
+.component {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: calc(var(--fontSize) * 1px);
+    font-weight: normal;
+}
+
+.component .body {
+    height: calc(100% - calc(var(--body-height) * 1px))
+}
+
+.component .footer {
+    padding-top: 3px;
+    /*font-size: 9px;*/
+    font-size: calc(calc(var(--fontSize) - 3) * 1px);
+}
+
+.component .master {
+    overflow: hidden;
+    overflow-x: auto; /* we run the scrollbar vs the actual table */
+    height: calc(100% - calc(var(--scrollbar-height) * 1px));
+    overflow-y: auto;
+}
+
+.component .detail {
+    overflow: hidden;
+    padding-left: 20px;
+}
+
+.component .item {
+    display: block;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-right: 30px;
+    margin-top: 2px;
+    padding-left: 0px;
+    margin-left: 0px;
+}
+
+.item .itemHeader {
+    display: inline;
+}
+
+.item .itemTitle {
+    padding-right: 10px;
+    font-size: 13px;
+    color: rgb(17, 96, 183);
+}
+
+.item .itemSubtitle {
+    font-size: 10px;
+}
+
+.item .itemControls {
+    display: inline-block;
+}

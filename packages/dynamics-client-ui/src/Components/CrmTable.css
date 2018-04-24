@@ -1,0 +1,174 @@
+/* CSS for CrmTable */
+
+:root {
+    --header-content-height: 24;
+    --header-border-height: 1;
+    --header-height: calc(var(--header-content-height) + (2 * var(--header-border-height)));
+}
+
+.displayBlock {
+    display: block;
+}
+
+.wrapper {
+    height: 100%;
+}
+
+
+/** Must be applied to the actual table element. */
+.crmTable {
+    /*font: inherit;*/
+
+    font-family:Segoe\000020UI;
+    font-weight: normal;
+    text-decoration: none;
+    font-style: normal;
+    font-size: inherit;
+
+    color: rgb(0,0,0);
+    
+    /*table-layout: fixed;*/
+    table-layout: auto;
+    
+    border: none;
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    empty-cells: show;
+
+    height: 100%; /* parent of <table> is a div  somewhere */
+}
+
+.crmTable td,
+.crmTable th {
+    font-size: inherit;
+    margin: 0;
+    overflow: hidden;
+    padding: 0.5em 1em;
+    /*overflow: visible; */
+}
+
+.crmTable thead {
+    vertical-align: middle;
+    text-align: left
+}
+
+.crmTable thead tr {
+    height: calc(var(--header-content-height) * 1px);
+    margin-bottom: 1px;
+    color: rgb(68,68,68);
+    border-bottom: 1px solid rgb(214,214,214);
+    border-top: 1px solid rgb(214,214,214);
+}
+
+.crmTable tbody {
+    max-height: calc(100% - calc(var(--header-height)  * 1px));
+}
+
+.crmTable td {
+    background-color: transparent
+}
+
+.crmTable tbody tr {
+    height: 28px;
+}
+
+.crmTable thead tr th {
+    font: inherit;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.crmTable tbody tr.selected {
+    background-color: rgb(177,214,240)
+}
+
+.crmTable tbody td {
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-bottom: 1px;
+    /*padding-right: 5px;*/
+    padding-top: 1px;
+    word-wrap: normal;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.crmTable .valueCell {
+    width: inherit;
+    word-wrap: normal;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: left;
+    padding-left: 1px;
+}
+
+.crmBody tr:hover {
+    background: #d7ebf9 !important;
+}
+
+.crmTable thead th:hover {
+    background: #d7ebf9 !important;
+}
+
+.crmTable :global(.sort-container) :global(.sort-order) {
+    padding-left: 0.5em;
+    /*display: none;*/
+}
+
+.crmTable :global(.sort-container) :global(.sort.sort-desc) {
+    background-image: url("Images/sort_down.png");
+    background-repeat: no-repeat;
+}
+
+.crmTable :global(.sort-container) :global(.sort.sort-asc) {
+    background-image: url("Images/sort_up.png");
+    background-repeat: no-repeat;
+}
+
+/* BORDERED */
+.bottomBordered tbody {
+    border-bottom: 1px solid rgb(214,214,214);
+}
+
+
+/* OVERFLOW CONTROL - https://stackoverflow.com/questions/9789723/css-text-overflow-in-a-table-cell
+ *
+ * <td><span class='textOverflowContainer"><span class="textOverflowEllipsis" title="...">...</span</span></td>
+ */
+.textOverflowContainer {
+    position: relative;
+    max-width: 100%;
+    padding: 0 !important;
+    display: -webkit-flex;
+    display: -moz-flex;
+    display: flex;
+    vertical-align: text-bottom !important;
+}
+
+.textOverflowEllipsis {
+    position: absolute;
+    white-space: nowrap;
+    overflow-y: visible;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+    top: 0;
+    left: 0;
+}
+
+.textOverflowContainer:after,
+.textOverflowEllipsis:after {
+    content: '-';
+    display: inline-block;
+    visibility: hidden;
+    width: 0;
+}

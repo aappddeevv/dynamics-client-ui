@@ -1,0 +1,106 @@
+/** Flex utilities. */
+
+.flexHorizontal {
+    display: flex;
+    flex-direction: row;
+}
+
+.flexVertical {
+    display: flex;
+    flex-direction: column;
+}
+
+.flexHalf {
+    flex-basis: 50%;
+}
+
+.flex70 {
+    flex-basis: 70%;
+}
+
+.flex80 {
+    flex-basis: 80%;
+}
+
+.flex20 {
+    flex-basis: 20%;
+}
+
+.flex30 {
+    flex-basis: 30%;
+}
+
+.flexNone {
+    flex: none;
+}
+
+/* Default is usually 0 1 auto */
+.flexAuto {
+    flex: 1 1 auto;
+}
+
+.flexFirst {
+    order: -1;
+}
+
+.flexLast {
+    order: 1;
+}
+
+.flexOrderNone {
+    order: 0;
+}
+
+.flexExpandLeft {
+    margin-left: auto !important;
+}
+
+.flexExpandRight {
+    margin-right: auto;
+}
+
+.flexExpandTop {
+    margin-top: auto;
+}
+
+.flexExpandBottom {
+    margin-bottom: auto;
+}
+
+/* Main axis, center. */
+.flexAlignItemsCenter {
+    align-items: center;
+}
+
+.alignItemsCenter { 
+ align-items: center;
+}
+
+.flexAlignItemsStretch {
+    align-items: stretch;
+}
+
+.alignItemsStretch {
+  align-items: stretch; 
+}
+
+.flexAlignItemsEnd {
+  align-items: flex-end;
+}
+
+.alignItemsEnd {
+ align-items: flex-end;
+}
+
+.flexAlignItemsStart {
+  align-items: flex-start;
+}
+
+.alignItemsStart {
+ align-items: flex-start;
+}
+
+.stretchBoth {
+  align-content: stretch;
+  align-items: stretch;
+}

@@ -1,0 +1,18 @@
+/** RemoveIconButton CSS */
+
+:root {
+    --size: 16;
+}
+
+.removeIconButton {
+    background-image: url("Images/delete.png");
+    background-repeat: no-repeat;
+    width: 16px;
+    height: 16px;
+    display: block;
+    padding: 0px;
+    margin: 0px;
+    border: 0px;
+    background-color: transparent;
+    visibility: visible;
+}

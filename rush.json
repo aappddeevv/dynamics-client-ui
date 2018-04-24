@@ -1,0 +1,18 @@
+{
+  "rushVersion": "4.3.0",
+  "npmVersion": "5.7.1",
+  "nodeSupportedVersionRange": ">=8.9.0 <= 9.11.0",
+
+  "projects": [
+    {
+      "packageName": "@aappddeevv/dynamics-client-ui",
+      "projectFolder": "packages/dynamics-client-ui",
+      "shouldPublish": true 
+    },
+    {
+      "packageName": "@aappddeevv/dynamics-client-ui-react",
+      "projectFolder": "packages/dynamics-client-ui-react",
+      "shouldPublish": true
+    },
+  ]
+}

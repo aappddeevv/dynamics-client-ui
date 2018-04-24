@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "jsx": "react"
+        ,"strictNullChecks": true
+	      ,"importHelpers": true 
+	      ,"noEmitHelpers": true 
+	      ,"experimentalDecorators": true
+	      ,"emitDecoratorMetadata": false,
+	"allowSyntheticDefaultImports": true,
+        "inlineSourceMap": false
+        ,"sourceMap": true
+	      ,"noEmitOnError": false
+        ,"moduleResolution": "node"
+	      ,"module": "commonjs"
+        ,"target": "es2015"
+        ,"lib": ["dom", "esnext"]
+	      ,"declaration": true
+        ,"baseUrl": "."
+        ,"paths": {
+            "BuildSettings": [
+                "./BuildSettings.empty"
+            ],
+            "AddressEditorScalaJS": [
+                "./scala/addresseditor/target/scala-2.12/addresseditor-fastopt.js"
+            ]
+        }
+        ,"traceResolution": false
+    }
+    ,"exclude": [
+	      "node_modules",
+        "dist"
+	      ,"**/*.spec.ts"
+	      ,"**/*.test.ts"
+	      ,"**/*.spec.js"
+        ,"**/*.test.js"	
+    ]
+    ,"include": ["src/**/*", "./typings/*.d.ts"]
+}

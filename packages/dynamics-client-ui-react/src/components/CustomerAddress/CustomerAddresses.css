@@ -1,0 +1,8 @@
+/** Customer Addresses */
+/** DEPRECATED */
+
+.addressSelector {
+    & .label {
+        width: 100px;
+    }
+}

@@ -1,0 +1,12 @@
+/** Relativity Component css */
+/** DEPRECATED */
+:root {
+    --headerHeight: 40px;
+    --extra: 10px;
+    --totalHeaderHeight: calc(var(--headerHeight) + var(--extra));
+}
+
+:global(.rc-tree) {
+    height: calc(100% - var(--totalHeaderHeight));
+    overflow-y: auto;
+}

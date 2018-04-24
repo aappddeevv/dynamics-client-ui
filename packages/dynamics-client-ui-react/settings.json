@@ -1,0 +1,12 @@
+{
+	"editor.insertSpaces": true,
+	"tslint.enable": true,
+	"editor.formatOnSave": true,
+	"files.trimTrailingWhitespace": true,
+	"editor.tabSize": 2,
+	"workbench.colorCustomizations": {
+		"editorWarning.foreground": "#ff0",
+		"editorInfo.foreground": "#00f"
+	},
+	"git.ignoreLimitWarning": true
+}

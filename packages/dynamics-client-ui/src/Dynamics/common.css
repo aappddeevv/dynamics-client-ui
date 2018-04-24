@@ -1,0 +1,61 @@
+/**
+ * https://jsfiddle.net/9wycg99v/5/ 
+ * https://stackoverflow.com/questions/9789723/css-text-overflow-in-a-table-cell
+ */
+
+.textOverflowContainer {
+    position: relative;
+    max-width: 100%;
+    padding: 0 !important;
+    display: -webkit-flex;
+    display: -moz-flex;
+    display: flex;
+    vertical-align: text-bottom !important;
+}
+
+.textOverflowEllipsis {
+    position: absolute;
+    white-space: nowrap;
+    overflow-y: visible;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    -ms-text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+    max-width: 100%;
+    min-width: 0;
+    top: 0;
+    left: 0;
+}
+
+.textOverflowContainer:after,
+.textOverflowEllipsis:after {
+    content: '-';
+    display: inline-block;
+    visibility: hidden;
+    width: 0;
+}
+
+.bottomLineSeparator {
+    width: 100%;
+    border-bottom-width: 1;
+    border-bottom-color: rgb(17,96,183);
+    border-bottom-style: solid;
+    padding-bottom: 5;
+    margin-bottom: 5;
+}
+
+.iconOnlyButton {
+    display: block;
+    padding: 0;
+    margin: 0;
+    border: none;
+    height: 16px;
+    width: 16px;
+    background-color: transparent;
+}
+
+/** Progress indicator, used across components. */
+.loading {
+    background-image: url("Images/progress_small.gif");
+    background-repeat: no-repeat;
+}

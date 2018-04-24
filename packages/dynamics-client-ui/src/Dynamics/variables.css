@@ -1,0 +1,8 @@
+/* Top-level default variables for the dynamics libary go here. We need to run 
+ * some type of theme'ish processing.
+ * You can include this file using `@import "../whatever/Dynamics/variables.css";`.
+ */
+:root {
+  --font-family-base: 'Segoe UI', 'Arial', sans-serif;
+  --font-size-base: 14px;
+}

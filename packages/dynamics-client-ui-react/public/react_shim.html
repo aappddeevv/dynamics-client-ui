@@ -1,0 +1,82 @@
+<!--
+React based shim to load react code either for hot module development
+or for production us. The shim can load the code into the targeted
+WebResource iframe or into the parent, which is one up from the
+standard dynamics WebResource iframe. This is useful when you need
+access to the entire screen. ReactDOM.createPortal would also work
+but you'll need to adjust your styles vs a direct load into the
+parent of the iframe. You can also run code in the targeted load window
+through `code` or run code in the WebResource iframe through codeIFrame.
+To hide the iframe after loading in to the parent, set hideParent=true.
+All settings come from the WebResource form edito "data" parameter.
+You have limited "length" in "data" so you may want to create a regular
+HTML entry point that has your final set of configuration prameters in it
+or acesss the CRM server for full configuration information.
+
+It is suggested that you set your component's runprops in a sub-object
+of data so it is not full of shim "control" properties.
+-->
+<html>
+
+<head>
+    <script src="../ClientGlobalContext.js.aspx"></script>
+    <script src="./ui/CRMWebAPI.js"></script>
+</head>
+<script>
+    function getURLParameter(name, search) {
+        return decodeURIComponent((new RegExp('[?|&]' + name + '=' +
+            '([^&;]+?)(&|#|;|$)').exec(search) || [, ""])[1].replace(/\+/g, '%20')) || null
+    }
+    function load(targetDoc, src, id, code) {
+        var scriptHtml = targetDoc.createElement("script")
+        if (code) {
+            scriptHtml.appendChild(targetDoc.createTextNode(code))
+        }
+        else if (src) {
+            scriptHtml.setAttribute("src", src)
+        }
+        if (id) scriptHtml.setAttribute("id", id)
+        targetDoc.head.appendChild(scriptHtml)
+    }
+
+    var runmain = true
+    var data = decodeURIComponent(getURLParameter("data", document.location.search))
+    var config = {}
+    try {
+        config = JSON.parse(data) || {}
+    } catch (e) {
+        window.alert("[" + window.frameElement.id + "]: Error parsing data parameter: " + e.message)
+    }
+    // inject data into this window and parent windnow
+    var defaultName = "_" + window.frameElement.id + "_data"
+    var injectionName = config.injectionName || defaultName
+    window[injectionName] = config
+    var parentInjectionName = config.parentInjectionName || injectionName
+    window.parent[parentInjectionName] = config
+
+    var targeturl = config.targeturl || 'https://localhost:8080/app.js';
+    var loadIntoParent = config.loadIntoParent || false;
+    var id = config.scriptElementId ? config.scriptElementId : null
+    if (config.runmain && !!config.runmain) runmain = config.runmain
+    var code = null
+    if (config.code) code = config.code
+
+    console.log("SHIM: query parameters: " + document.location.search)
+    console.log("SHIM: data value (string): ", data)
+    console.log("SHIM: targeturl: ", targeturl)
+    console.log("SHIM: loadIntoParent: ", loadIntoParent)
+    console.log("SHIM: all config", config)
+
+    var targetDoc = document
+    if (loadIntoParent) targetDoc = window.parent.document
+    load(targetDoc, targeturl + document.location.search, id, null)
+    if (code) load(targetDoc, null, null, code)
+    if (config.iFrameCode) load(document, null, null, config.iFrameCode)
+    if (loadIntoParent && config.hideFrame) window.frameElement.style.display = "none"
+</script>
+
+<div id="container" class="shimContainer">
+</div>
+</body>
+
+</html>
