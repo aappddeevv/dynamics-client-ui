@@ -28,5 +28,5 @@ package object addresseditor {
   /** 
    * Extract a value from an js.Object/input value suitable for using in a ValueRenderer.
    */
-  type Extractor[O, A] = js.UndefOr[O] => js.UndefOr[A]
+  type Extractor[O, A] = Option[O] => Option[A]
 }

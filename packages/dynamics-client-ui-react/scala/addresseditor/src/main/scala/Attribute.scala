@@ -21,13 +21,12 @@ import fabric.Utilities._
 
 import ttg.react.implicits._
 
-@js.native
 trait AttributeClassNames extends js.Object {
-  var root: String = js.native
-  var label: String = js.native
-  var control: String = js.native
-  var edit: String = js.native
-  var display: String = js.native
+  var root: String
+  var label: String
+  var control: String
+  var edit: String
+  var display: String
 }
 
 trait AttributeStyles extends js.Object {
@@ -44,7 +43,6 @@ trait AttributeStyles extends js.Object {
  * Show a label and a control, independent of the attribute's value type. 
  * Choose which attribute value controls based on the isEditing flag.
  */
-@JSExportTopLevel("Attribute")
 object Attribute {
 
   val c = statelessComponent("Attribute")
@@ -52,14 +50,9 @@ object Attribute {
 
   def apply[T](
     attribute: AttributeMetadata,
-    _value: js.UndefOr[T],
+    _value: Option[T],
     controls: AttributeControls[T],
-    _setEditing: (String, Boolean) => Unit,
-    _setDirty: (String, Boolean) => Unit,
-    /** If this attribute is editing. */
-    isEditing: Boolean,
-    /** If this attribute is considered dirty. */
-    isDirty: js.UndefOr[Boolean] = js.undefined,
+    _onChange: EditingStatus => Unit,
     className: js.UndefOr[String] = js.undefined,
     styles: js.UndefOr[AttributeStyles] = js.undefined,
     getClassNames: (js.UndefOr[String], js.UndefOr[AttributeStyles]) => AttributeClassNames = Attribute._getClassNames) =
@@ -69,16 +62,17 @@ object Attribute {
         val cn = getClassNames(className, s)
 
         val context = new RendererContext[T] {
-          var value = _value
-          var className = css(cn.control, cn.edit)
-          var setEditing = js.Any.fromFunction2(_setEditing)
-          var setDirty = js.Any.fromFunction2(_setDirty)
+          val value = _value
+          val className = Some(css(cn.control, cn.edit))
+          def started(): Unit = _onChange(Started(attribute.LogicalName))
+          def cancelled(): Unit = _onChange(Cancelled(attribute.LogicalName))
+          def changed(maybeValue: Option[T]): Unit = _onChange(Changed(attribute.LogicalName, maybeValue))
         }
 
         div(new DivProps {
           className = cn.root
         })(
-          Status.make(),
+          Status(),
           controls.label(Renderers.simpleLabelContext(cn.label)),
           // based on editing status, use one control or the other
           //if(isEditing) controls.value.edit(context)

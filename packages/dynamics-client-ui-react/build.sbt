@@ -24,7 +24,7 @@ lazy val buildSettings = Seq(
   scalaVersion := "2.12.4",
   resolvers += Resolver.sonatypeRepo("releases"),
   resolvers += Resolver.jcenterRepo,
-  scalafmtVersion in ThisBuild := "1.4.0",
+  scalafmtVersion in ThisBuild := "1.5.1",
   autoCompilerPlugins := true
 ) ++ licenseSettings
 
@@ -58,6 +58,8 @@ lazy val commonSettings = Seq(
         else Nil),
   scalaJSLinkerConfig ~= { _.withModuleKind(ModuleKind.CommonJSModule) },
   libraryDependencies ++= Seq(
+    "org.typelevel" %%% "cats-core" % "1.1.0",
+    "org.typelevel" %%% "cats-effect" % "latest.version",
     "org.scala-js" %%% "scalajs-dom" % "latest.version"),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   autoAPIMappings := true,

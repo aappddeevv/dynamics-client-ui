@@ -29,6 +29,7 @@ trait AttributeLabelProps extends  LabelHTMLAttributes[dom.html.Label] {
  *  Display a label for an attribute. The basic label has no styling in itself
  * it all comes from the parent. See [[Attribute]].
  */
+@JSExportTopLevel("AttributeLabel")
 object AttributeLabel {
   val c = statelessComponent("AttributeLabel")
   import c.ops._
@@ -46,7 +47,7 @@ object AttributeLabel {
       )
     }
 
-  @JSExportTopLevel("AttrbuteLabel")
+  @JSExport("Component")
   val jsComponent = c.wrapScalaForJs{ (jsProps: AttributeLabelProps) =>
     apply(jsProps)(extractChildren(jsProps):_*)
   }

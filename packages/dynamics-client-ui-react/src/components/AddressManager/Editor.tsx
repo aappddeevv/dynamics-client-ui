@@ -2,7 +2,8 @@ import * as React from "react"
 import { compose, withState, withHandlers, ComponentEnhancer } from "recompose"
 import { Omit } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/interfaces"
 import { Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
-import { EntityDefinition, Attribute } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
+import { EntityDefinition, Attribute, Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
+import { normalizeWith } from "@aappddeevv/dynamics-client-ui/lib/Data/Utils"
 
 /** What the output of [addEditorState] will receive as input. */
 export interface EditorProps {
@@ -44,7 +45,7 @@ export function addEditorState<P extends EditorProps>(component: React.Component
  *
  * @template T Type of entity record.
  */
-export interface EditorController<T> {
+export interface DataController<T> {
     /** 
      * Allow a delete or not. May be called a few times (not several) for the same 
      * item so be efficient.
@@ -60,7 +61,9 @@ export interface EditorController<T> {
     /** Delete an entity if canDelete was true. */
     delete?: (a: T) => Promise<string | void>
 
-    /** Create a new T with some initial values. May require asynchronous processing. */
+    /** 
+     * Create a new T with some initial values. May require asynchronous processing.
+     */
     create?: (context: Record<string, any>) => Promise<T>
 
     /** Whether *anything* can be edited for a given entity. */
@@ -70,22 +73,9 @@ export interface EditorController<T> {
     canEdit: (attributeId: string, id?: Id) => boolean
 
     /** 
-     * Save accumulated changes. Resets change state, if any. Returns true even if
-     * there were no changes to save.
+     * Save indicated changes.
      */
-    save: (id?: Id) => Promise<string | void>
-
-    /** 
-     * Record a changed value for an entity+attribute. Return user friendly message if change 
-     * is *not* allowed.
-     */
-    onChange: (id: Id, attributeId: string, newValue: any) => Promise<string | void>
-
-    /** Whether onChange has been called. */
-    hasChanges: (id?: Id) => boolean
-
-    /** Reset any changes. */
-    resetChanges: (id?: Id) => void
+    save: (a: T, changed: Array<string>) => Promise<string | void>
 }
 
 /**
@@ -103,6 +93,24 @@ export interface EditorEntityMetadata {
     attributesById: Record<string, Attribute>
     /** By logical name. For a single entity, should be unique. */
     attributesByName: Record<string, Attribute>
+}
+
+/**
+ * Create a EditorEntityMetadata needed to drive an editor centered on a single entity.
+ * @param entityName 
+ * @param metadata 
+ */
+export function makeEntityMetadata(entityName: string, metadata: Metadata): Promise<EditorEntityMetadata> {
+    return metadata.getMetadata(entityName)
+        .then(ed => {
+            return metadata.getAttributes(entityName)
+                .then(attrs => ({
+                    entity: ed!,
+                    attributes: attrs,
+                    attributesById: normalizeWith("MetadataId", attrs),
+                    attributesByName: normalizeWith("LogicalName", attrs),
+                }))
+        })
 }
 
 export interface AttributeSpecification {
@@ -131,4 +139,4 @@ export interface EditorSpecification {
     performSearch: (entities: Array<string>, allowMultiple?: boolean) => PerformSearchResult
 }
 
-export type PerformSearchResult = PromiseLike<Xrm.LookupValue | void>
+export type PerformSearchResult = PromiseLike<Array<Xrm.LookupValue> | void>

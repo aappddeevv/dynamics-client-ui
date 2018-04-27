@@ -7,7 +7,6 @@ package addresseditor
 
 import scala.scalajs.js
 
-
 /** 
  * Entity metadata of the entity being edited.
  */
@@ -46,7 +45,7 @@ trait EditorSpecification extends js.Object {
   /** Metadata about the entity and attributes being edited. */
   val metadata: EditorEntityMetadata = js.native
   /** Perform a lookup in some UI specific way. */
-  val performSearch: js.Function2[js.Array[String], js.UndefOr[Boolean], js.Promise[js.UndefOr[LookupValue]]] = js.native
+  val performSearch: js.Function2[js.Array[String], js.UndefOr[Boolean], js.Promise[js.UndefOr[js.Array[LookupValue]]]] = js.native
 }
 
 @js.native

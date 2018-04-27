@@ -7,6 +7,7 @@
 import { Client, Id, Metadata, MetadataProvider } from "@aappddeevv/dynamics-client-ui/lib/Data"
 export * from "./DataModel"
 import { CustomerAddress } from "./DataModel"
+import { DEBUG } from "BuildSettings"
 
 /** Minimum set of attributes if you want to use it in your query. */
 export const defaultAttributes = [
@@ -34,7 +35,7 @@ export interface CustomerAddressDAO extends MetadataProvider {
     fetchAddressesFor<T extends CustomerAddress = CustomerAddress>(parentId: string): Promise<Array<T>>
     /** Create an address, return its "representation". Requires a parent entity name and parent id */
     create<T extends CustomerAddress = CustomerAddress>(entityName: string, parentId: Id): Promise<T>
-    delete(id: Id): Promise<boolean>
+    delete(id: Id): Promise<string | void>
     /** Save some changes to an existing address. Return void if successfully applied, a message otherwise. */
     save(id: Id, data: object): Promise<string | void>
 }
@@ -49,15 +50,23 @@ export class CustomerAddressDAOImpl implements CustomerAddressDAO, MetadataProvi
 
     public get metadata(): Metadata { return this.meta }
 
-    public delete = async (id: Id): Promise<boolean> => {
+    public delete = async (id: Id): Promise<string | void> => {
         return this.client.Delete("customeraddresses", id)
+            .then(r => {
+                if (r) return undefined
+                else return "Unable to delete address. Is it in use or a pre-allocated address?"
+            })
+            .catch(e => {
+                if (DEBUG) console.log("Unable to delete address", e)
+                return "Unable to delete address. Is it in use or a pre-allocated address?"
+            })
     }
 
     public save = async (id: Id, data: object): Promise<string | void> => {
         return this.client.Update("customeraddresses", id, data, false)
             .then(r => undefined)
             .catch(e => {
-                console.log("Error saving customeraddress", e)
+                if (DEBUG) console.log("Error saving customeraddress", e)
                 return "Unable to save address."
             })
     }

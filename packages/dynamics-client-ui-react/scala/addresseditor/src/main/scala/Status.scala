@@ -38,13 +38,12 @@ trait StatusProps extends js.Object {
 }
 
 /** Show the status of an attribute e.g. Ok or Erroras a small adornment. */
-@JSExportTopLevel("Status")
 object Status {
 
   val c = statelessComponent("Status")
   import c.ops._
 
-  def make(props: js.UndefOr[StatusProps] = js.undefined) = c.copy(new methods{
+  def apply(props: js.UndefOr[StatusProps] = js.undefined) = c.copy(new methods{
     val styles = getStyles(props.map(_.styles).getOrElse(js.undefined))
     val cn = getClassNames(props.map(_.className).getOrElse(js.undefined), styles)
     val render = self => {
@@ -58,9 +57,8 @@ object Status {
     }
   })
 
-  @JSExport("make")
   val jsComponent = c.wrapScalaForJs { (jsProps: js.UndefOr[StatusProps]) =>
-    make(jsProps)
+    apply(jsProps)
   }
 
   def _getStyles(customStyles: js.UndefOr[StatusStyles]): StatusStyles = {
@@ -84,7 +82,6 @@ object Status {
     concatStyleSets[StatusStyles](styles, customStyles)
   }
 
-  @JSExport
   def getStyles = memoizeFunction(js.Any.fromFunction1(_getStyles))
 
   private def _getClassNames(
@@ -104,6 +101,5 @@ object Status {
     ))
   }
 
-  @JSExport
   def getClassNames = memoizeFunction(js.Any.fromFunction2(_getClassNames))
 }

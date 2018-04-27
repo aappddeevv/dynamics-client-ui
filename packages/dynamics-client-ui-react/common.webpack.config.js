@@ -43,7 +43,6 @@ const config = {
             react: path.join(__dirname, "./node_modules/react"),
             "react-dom": path.join(__dirname, "./node_modules/react-dom"),
             "prop-types": path.join(__dirname, "./node_modules/prop-types"),
-            glamor: path.join(__dirname, "./node_modules/glamor")
         }
     },
     module: {

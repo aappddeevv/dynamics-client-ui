@@ -6,9 +6,18 @@ package dynamics.client.ui.react
 package addresseditor
 
 import scala.scalajs.js
+import js.|
 import js.annotation._
 import js.JSConverters._
 import js.Dynamic.{literal => jsobj}
+import org.scalajs.dom
+
+import scala.concurrent._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import cats._
+import cats.data._
+import cats.implicits._
 
 import ttg.react.{implicits, fabric, vdom, _}
 import fabric.{styling, components, _}
@@ -45,15 +54,19 @@ object CustomerAddressControlsFactory {
   // e.g. making country ar statoeorprovince a lookup not a string
 }
 
-/** JS friendly rendering context used as input to a ValueRenderer. */
-trait RendererContext[T] extends js.Object {
+trait RendererContext[T] {
   /**
    * Optional value to render. Controls should handle non-values of course
    * and show something e.g. "---" for text.
    */
-  var value: js.UndefOr[T]
+  def value: Option[T]
+
   /** Classname to apply to the control, typically the outer container. */
-  var className: js.UndefOr[String]
+  def className: Option[String]
+
+  def started(): Unit
+  def cancelled(): Unit
+  def changed(value: Option[T]): Unit
 }
 
 /**
@@ -75,20 +88,18 @@ trait LabelRendererContext extends js.Object {
 
 /** mid is some type of id, such as a logicalname or metadataid. */
 sealed trait EditingStatus { def mid: String }
-/** An attribute is starting to be edited. This may not reliably be issued. */
+/** An attribute is starting to be edited, individual keystrokes should not be tracked. */
 case class Started(val mid: String) extends EditingStatus
 /** A change was committed at the attribute level. Do not use this for per-keystroke changes. */
-case class Changed(val mid: String, value: js.Any) extends EditingStatus
-/** Changing was cancelled. UI probably needs a refresh to restore the original value. */
+case class Changed(val mid: String, value: Option[scala.Any]) extends EditingStatus
+/** Changing an attribute was cancelled. */
 case class Cancelled(val mid: String) extends EditingStatus
 
 /**
  * Args for creating a renderer that are independent of its runtime state.
  */
-trait CreateRendererArgs[T <: AttributeMetadata, A <: js.Any] extends js.Object {
+trait MakeRendererArgs[+T <: AttributeMetadata] extends js.Object {
   val attribute: T
-  /** Called during a single attribute's editing lifecycle. */
-  val onStatusChange: js.Function1[EditingStatus, Unit]
 }
 
 /**
@@ -104,10 +115,10 @@ object Renderers {
      className = _className
     }
 
-  def rendererArgs[T <: AttrbuteMetadata](_attribute: T, _onStatusChange: js.Function1[EditingStatus, Unit]) =
-    new CreateRendererArgs {
+  // Ignores _onStatusChange
+  def rendererArgs[T <: AttributeMetadata](_attribute: T, _onStatusChange: js.Function1[EditingStatus, Unit]) =
+    new MakeRendererArgs[T] {
       val attribute = _attribute
-      val onStatusChange = _onStatusChange
     }
 
   /** Render a label to display the attribute's "name". */
@@ -121,6 +132,7 @@ object Renderers {
     renderer
   }
 
+  @JSExport
   def makeDataProps(attribute: AttributeMetadata): js.Object = {
     jsobj(
       "id" -> attribute.MetadataId,
@@ -129,6 +141,7 @@ object Renderers {
     )
   }
 
+  @JSExport
   val dataIsFocusable = jsobj("data-is-focusable" -> "true")
 
   /** 
@@ -137,31 +150,74 @@ object Renderers {
    * @todo Take into account MaxLength. 
    */
   @JSExport
-  def makeString(args: CreateRendererArgs[StringAttributeMetadata]): ValueControls[String] = {
-    val dataid = makeDataProps(attribute)
+  def makeString(args: MakeRendererArgs[StringAttributeMetadata], nlines: Int = 0): ValueControls[String] = {
+    //js.Dynamic.global.console.log("Renderers.makeString", args.attribute)
+    val dataid = makeDataProps(args.attribute)
     val display: ValueRenderer[String] = context => {
       val props = merge[ILabelProps](
         new ILabelProps{
-          className = context.className
+          className = js.defined(context.className.getOrElse(""))
         },
         dataid,
         dataIsFocusable)
       Label(props)(context.value.getOrElse[String](""))
     }
 
-    val edit: ValueRenderer[String] = context => {
-      val props =  merge[ITextFieldProps](
+    val multilineProps =
+      if(nlines > 0)
         new ITextFieldProps {
+          multiline = true
+          resizable = false
+          rows = if(nlines>100) 10 else nlines
+        }
+        else new ITextFieldProps {}
+
+    val edit: ValueRenderer[String] = context => {
+      //println(s"String control (${args.attribute.LogicalName}): value ${context.value}")
+      val props =  merge[ITextFieldProps](
+        multilineProps, 
+        new ITextFieldProps {
+          //defaultValue = context.value.getOrElse[String]("")
           value = context.value.getOrElse[String]("")
-          className = context.className
+          className = js.defined(context.className.getOrElse(""))
           placeholder = "---"
           borderless = true
+          maxLength = args.attribute.MaxLength
+          onFocus = js.defined { fevent =>
+            //context.onStatusChange(Started(args.attribute.LogicalName))
+            println(s"${args.attribute.LogicalName}.onFocus")
+            context.started()
+          }
+          onBlur = js.defined{ fevent =>
+            val valueopt = Option(fevent.target.value).filterTruthy
+            // following is equivalent
+            //val valueopt = fevent.target.value.toTruthyUndefOr.toOption
+            val changed = context.value =!= valueopt
+            //println(s"${args.attribute.LogicalName}.onBlur old: ${context.value}, new: $valueopt, changed: $changed")
+            if(changed) context.changed(valueopt)
+            else context.cancelled()
+          }
+          onKeyDown = js.defined{ kevent =>
+            if(kevent.keyCode == dom.ext.KeyCode.Escape) {
+              context.cancelled()
+            } else if(kevent.keyCode == dom.ext.KeyCode.Enter) {
+              val valueopt = Option(kevent.target.value).filterTruthy
+              val changed =  valueopt =!= context.value
+              //println(s"${args.attribute.LogicalName}.onKeyDown old: ${context.value}, new: $valueopt, changed: $changed")
+              if(changed) context.changed(valueopt)
+              else context.cancelled()
+            }
+          }
         },
         dataid,
         dataIsFocusable)
       TextField(props)()
     }
     ValueControls(display, edit)
+  }
+
+  def makeMemo(args: MakeRendererArgs[MemoAttributeMetadata], nlines: Int = 5): ValueControls[String] = {
+    makeString(args, nlines)
   }
 
   /**
@@ -203,9 +259,28 @@ object Renderers {
    */ 
   @JSExport
   def makeSyntheticLookup(attribute: StringAttributeMetadata,
-    initiateSearch: () => js.Promise[js.UndefOr[LookupValue]]): ValueControls[String] = {
+    initiateSearch: () => Future[Option[LookupValue]]): ValueControls[String] = {
+
     val display: ValueRenderer[String] = context => div(null)
+
     val edit: ValueRenderer[String] = context => {
+
+      val dosearch = () =>
+      initiateSearch()
+        .recover {
+          case scala.util.control.NonFatal(e) => None
+        }
+        .foreach{ _ match {
+          case Some(lookupValue) =>
+            val valueopt = Option(lookupValue.name).filterTruthy
+            val changed = context.value =!= valueopt
+            //println(s"${attribute.LogicalName}.lookup result old: ${context.value}, new: $valueopt, changed: $changed")
+            if(changed) context.changed(valueopt)
+            else context.cancelled()
+          case _ =>
+            context.cancelled()
+        }}
+
       div(new DivProps{
         style = new IRawStyle {
           display = "flex"
@@ -220,10 +295,11 @@ object Renderers {
         ),
         IconButton(new IButtonProps {
           iconProps = new IIconProps { iconName = "Search" }
-          onClick = js.defined(_ => initiateSearch())
+          onClick = js.defined(_ => dosearch())
         })()
       )
     }
+
     ValueControls(display, edit)
   }
 }
@@ -235,13 +311,10 @@ object JSExtractors {
   /**
    * Can this be derived from StringAttributeMetadata directly for the odata case? I don't think so.
    */
-  def string(attribute: StringAttributeMetadata, field: String): Extractor[js.Object, String] =
-    obj => obj.flatMap(_.asDict[String].get(field).orUndefined)
+  def string(attribute: StringAttributeMetadata, field: Option[String] = None): Extractor[js.Object, String] =
+    objopt => objopt.flatMap(_.asDict[String|Null].get(field.getOrElse(attribute.LogicalName)).flatMap(_.toNonNullOption))
 
-  /** Extract a date from an object. */
+  /** Extract a date from an object, could be a date or a string depending on the reviver used. */
   def date(attribute: DateTimeAttributeMetadata, field: String): Extractor[js.Object, js.Date] =
-    obj => obj.flatMap(_.asDict[js.Date].get(field).orUndefined)
-
-
-
+    objopt => objopt.flatMap(_.asDict[js.Date].get(field))
 }

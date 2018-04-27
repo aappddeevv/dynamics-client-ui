@@ -43,7 +43,7 @@ object AttributeContainer {
   val c = statelessComponent("AttributeContainer")
   import c.ops._
 
-  def make(props: js.UndefOr[AttributeContainerProps] = js.undefined)(children: ReactNode*) =
+  def apply(props: js.UndefOr[AttributeContainerProps] = js.undefined)(children: ReactNode) =
     c.copy(new methods {
       val styles = getStyles(props.map(_.styles).getOrElse(js.undefined))
       val cn = getClassNames(props.map(_.className).getOrElse(js.undefined), styles)
@@ -57,7 +57,7 @@ object AttributeContainer {
     })
 
   val jsComponent = c.wrapScalaForJs { (jsProps: js.UndefOr[AttributeContainerProps]) =>
-    make(jsProps)(extractChildren(jsProps):_*)
+    apply(jsProps)(extractChildren(jsProps))
   }
 
   def _getStyles(customStyles: js.UndefOr[AttributeContainerStyles]): AttributeContainerStyles = {

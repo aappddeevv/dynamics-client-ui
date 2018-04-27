@@ -11,31 +11,49 @@ package addresseditor
 import scala.scalajs.js
 import js.annotation._
 import js.|
+import js.JSConverters._
+
+import scala.concurrent._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import cats._
+import cats.implicits._
 
 import ttg.react._
 import elements._
 import ttg.react.implicits._
-import ttg.react.vdom.tags._
-import ttg.react.fabric
+import vdom.tags._
 import fabric._
 import fabric.components._
 import fabric.styling._ // some types
 import fabric.styling.Styling._
 import fabric.Utilities._
 
+import Renderers.{makeLabel, makeString, rendererArgs, makeSyntheticLookup, makeMemo}
+
 trait AddressDetailProps extends js.Object {
-  var className: js.UndefOr[String] = js.undefined
-  var entity: CustomerAddress|Null
-  var setDirty: js.Function1[Boolean, Unit]
+  var className: js.UndefOr[String]
+  var entity: js.UndefOr[CustomerAddress]
   var setEditing: js.Function1[Boolean, Unit]
+  var onChange: js.Function2[String, js.UndefOr[scala.Any], Unit]
   var specification: EditorSpecification
-  // this needs to move out of here since controls are always the same once
-  // we have the metadata.
-  //var controlsByName
+  var onRenderItem: js.UndefOr[js.Function1[ItemRenderProps, ReactNode]]
+}
+
+/** Children can be created using this trait as props. */
+trait ItemRenderProps {
+  val valueopt: Option[CustomerAddress]
+  val specification: EditorSpecification
+  val onChange: EditingStatus => Unit
+  val performSearch: String => Future[Option[LookupValue]]
+  val attributeControlWrapper: ReactNode => ReactNode
 }
 
 /**
- * Show attributes in a for like way. 
+ * Show attributes to be edited. An item renderer renders the "children". If non
+ * provided, the default item renderer renders the standard CustomerAddress
+ * attributes. This is presentation component that changes its props to allow
+ * the childern to be created in `onRenderItem`.
  */
 @JSExportTopLevel("AddressDetail")
 object AddressDetail {
@@ -43,32 +61,44 @@ object AddressDetail {
   val c = statelessComponent("AddressDetail")
   import c.ops._
 
-  def setEditing(aname: String, flag: Boolean): Unit = {
-    println(s"setEditing $aname, $flag")
-  }
+  def onRenderItem(props: ItemRenderProps): ReactNode =
+    new StandardDetailContent(
+        props.valueopt,
+        props.specification,
+        props.onChange,
+        props.performSearch,
+        props.attributeControlWrapper
+      ).content
 
-  def setDirty(aname: String, flag: Boolean): Unit = {
-    println("setDirty $aname, $flag")
-  }
-
-  def make(props: AddressDetailProps)(children: ReactNode*) = c.copy(new methods{
+  def apply(props: AddressDetailProps) = c.copy(new methods{
     val render = self => {
+      def _initiateSearch(entityName: String, allowMultiple: Boolean = false) =
+        props.specification.performSearch(js.Array(entityName), allowMultiple)
+          .toFuture
+          .recover {
+            case scala.util.control.NonFatal(e) =>
+              println(s"Perform search returned error $e")
+              js.undefined
+          }
+          .map(_.toOption.flatMap(_.headOption))
 
-      js.Dynamic.global.console.log("specification", props.specification)
-      val nameA = props.specification.metadata.attributesByName("name").asInstanceOf[StringAttributeMetadata]
-      val line1A = props.specification.metadata.attributesByName("line1").asInstanceOf[StringAttributeMetadata]
-      val line2A = props.specification.metadata.attributesByName("line2").asInstanceOf[StringAttributeMetadata]
-      val telephone1A = props.specification.metadata.attributesByName("telephone1").asInstanceOf[StringAttributeMetadata]
-      val telephone2A = props.specification.metadata.attributesByName("telephone2").asInstanceOf[StringAttributeMetadata]
-      val telephone3A = props.specification.metadata.attributesByName("telephone3").asInstanceOf[StringAttributeMetadata]
-      val cityA = props.specification.metadata.attributesByName("city").asInstanceOf[StringAttributeMetadata]
-      val stateorprovinceA = props.specification.metadata.attributesByName("stateorprovince").asInstanceOf[StringAttributeMetadata]
-      val countryA = props.specification.metadata.attributesByName("country").asInstanceOf[StringAttributeMetadata]
+      def _onChange(status: EditingStatus): Unit = {
+        println(s"editing change $status")        
+        status match {
+          case Started(id) => props.setEditing(true)
+          case Changed(id, value) => props.onChange(id, value.orUndefined)
+          case Cancelled(id) => props.setEditing(false)
+        }
+      }
 
-      val initiateSearch = //: js.Function2[js.Array[String], js.UndefOr[Boolean], js.Promise[LookupValue]] =
-        () => props.specification.performSearch(js.Array("new_country"), js.undefined)
-
-      val onChange: js.Function1[EditingStatus, Unit] = status => println(s"editing change $status")
+      val _valueopt = props.entity.toNonNullOption
+      val renderProps = new ItemRenderProps {
+        val valueopt = _valueopt
+        val specification = props.specification
+        val onChange = _onChange
+        val performSearch = _initiateSearch(_:String)
+        val attributeControlWrapper = AttributeContainer()
+      }
 
       div(new DivProps {
         className = mergeStyles(props.className, new IRawStyle {
@@ -80,61 +110,14 @@ object AddressDetail {
         FocusZone(new IFocusZoneProps {
           isCircularNavigation = true
         })(
-          AttributeContainer.make()(
-            Attribute[String](nameA,
-              JSExtractors.string(nameA, "name")(props.entity.toUndefOr),
-              AttributeControls[String](Renderers.makeLabel(nameA),Renderers.makeString(nameA)),
-              setEditing _, setDirty _,
-              false,
-              false)),
-          AttributeContainer.make()(
-            Attribute[String](line1A,
-              JSExtractors.string(line1A, "line1")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(line1A),
-                Renderers.makeString(line1A)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](line2A,
-              JSExtractors.string(line2A, "line2")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(line2A),
-                Renderers.makeString(line2A)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](cityA,
-              JSExtractors.string(cityA, "city")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(cityA),
-                Renderers.makeString(cityA)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](stateorprovinceA,
-              JSExtractors.string(stateorprovinceA, "stateorprovince")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(stateorprovinceA),
-                Renderers.makeString(stateorprovinceA)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](countryA,
-              JSExtractors.string(countryA, "country")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(countryA),
-                Renderers.makeSyntheticLookup(countryA, initiateSearch)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](telephone1A,
-              JSExtractors.string(telephone1A, "telephone1")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(telephone1A),
-                Renderers.makeString(telephone1A)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](telephone2A,
-              JSExtractors.string(telephone2A, "telephone2")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(telephone2A),
-                Renderers.makeString(telephone2A)), setEditing _, setDirty _, false, false)),
-          AttributeContainer.make()(
-            Attribute[String](telephone3A,
-              JSExtractors.string(telephone3A, "telephone3")(props.entity.toUndefOr),
-              AttributeControls(Renderers.makeLabel(telephone3A),
-                Renderers.makeString(telephone3A)), setEditing _, setDirty _, false, false)),
-          children
+          props.onRenderItem.fold(onRenderItem(renderProps))(_(renderProps))
         ))
     }
   })
 
-  @JSExport("make")
+  @JSExport("Component")
   val jsComponent = c.wrapScalaForJs { (jsProps: AddressDetailProps) =>
-    make(jsProps)(extractChildren(jsProps):_*)
+    apply(jsProps)
   }
 
 }

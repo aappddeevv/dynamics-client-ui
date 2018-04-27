@@ -1,9 +1,10 @@
 /** Combine master and detail into an editor like view. */
 import * as React from "react"
-
+import { Requireable } from "prop-types"
 import { CommandBar } from "office-ui-fabric-react/lib/CommandBar"
 import {
     AddressEditorProps, AddressEditorClassNames, AddressEditorStyles, CustomerAddressE,
+    EditorDetailProps, EditorListProps,
 } from "./AddressEditor.types"
 import {
     ColumnActionsMode,
@@ -17,46 +18,58 @@ import {
 } from "office-ui-fabric-react/lib/DetailsList"
 import { getStyles } from "./AddressEditor.styles"
 import { getClassNames } from "./AddressEditor.classNames"
-import { AddressDetail } from "./AddressDetail"
 import { AddressList } from "./AddressList"
 import { Id } from "@aappddeevv/dynamics-client-ui"
 import { CustomerAddress, defaultEnhancer } from "../CustomerAddress/DataModel"
-import { EntityForm } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
+import { EntityForm, EntityFormContext } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
 import { setStatePromise } from "@aappddeevv/dynamics-client-ui/lib/react"
 import { DEBUG } from "BuildSettings"
 import { firstOrElse } from '@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils';
 import * as Meta from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
 import { Maybe } from "monet"
-import { AddressDetail as AddressDetailX } from "AddressEditorScalaJS"
+import { AddressDetail as AddressDetailX, ScalaOption } from "AddressEditorScalaJS"
 import { AttributeSpecification, EditorSpecification } from "./Editor"
 import { FocusZone } from "office-ui-fabric-react/lib/FocusZone"
+import { Notification } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/NotificationManager"
 
 export type T = CustomerAddressE
 
 export interface State {
-    /** Selected address out of the master list*/
+    /** Selected address out of the master list. */
     selected: Maybe<T>
+    /** Clone of selected every time selected changes--editing scratchpad. */
+    buffer: Maybe<T>
+    /** Changed attribute identifiers id, or logical name, etc. */
+    changed: Array<string>
     /** Overall list. */
     items: Array<T>
-    /**
-     * Changes registered by the individual attribute controls. Since the input
-     * entity is usually not the same structure as the data structure needed
-     * to change the entity, we keep attribute->newvalue pairs indexed by attribute.
-     */
-    changes: Record<string, any>
 }
+
+export function defaultDetailRender(props: EditorDetailProps) {
+    return (<AddressDetailX.Component
+        {...props}
+    />)
+}
+
+export function defaultMasterRender(props: EditorListProps) {
+    return (<AddressList {...props} />)
+}
+
+const NAME = "AddressEditor"
 
 export class AddressEditor extends React.Component<AddressEditorProps, State> {
 
+    public static displayName = NAME
     private _styles: AddressEditorStyles
     private _classNames: AddressEditorClassNames
 
-    constructor(props: AddressEditorProps) {
+    constructor(props) {
         super(props)
         this.state = {
             items: [],
             selected: Maybe.None(),
-            changes: {},
+            buffer: Maybe.None(),
+            changed: [],
         }
         this.selection = new Selection({
             onSelectionChanged: this.onSelectionChanged,
@@ -65,10 +78,21 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
     private selection: ISelection
     /** Sorted/filtered address list in the master view. */
-    private sorted: Array<CustomerAddress> = []
+    private sorted: Array<T> = []
+    public context: EntityFormContext
 
-    protected discardChanges = () => {
-        this.setState({ changes: {} })
+    public static contextTypes = {
+        ...EntityForm.childContextTypes
+    }
+
+    // if the list is shuffled deeper down, we need to update or selection object
+    protected onListShuffle = (items: Array<T>): void => {
+        this.selection.setItems(items, false)
+    }
+
+    protected message = (n: Notification) => {
+        if (this.context.notifier)
+            this.context.notifier.add(n)
     }
 
     protected canSelectItem = (item: any): boolean => {
@@ -76,21 +100,25 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
 
     protected onSelectionChanged = (): void => {
+        const item = firstOrElse<any, null>(this.selection.getSelection(), null)
         this.setState({
-            selected: Maybe.fromNull<T>(firstOrElse<any, null>(this.selection.getSelection(), null))
+            selected: Maybe.fromNull<T>(item),
+            buffer: Maybe.fromNull<T>({ ...item }),
+            changed: [],
         })
+        if (DEBUG) console.log(`${NAME}.onSelectionChanged`, this.selection.getSelection())
     }
 
     protected onSort = (items: Array<CustomerAddressE>): void => {
+        // when subcompoent sorts, update Selection object but don't clear selections
+        console.log("onSort")
         this.selection.setItems(items, false)
     }
 
     protected refresh = async () => {
         return setStatePromise(this, {
-            addresses: [],
-            selectedAddress: null,
-            newAddress: null,
-            isDirty: false,
+            buffer: Maybe.None(),
+            selected: Maybe.None(),
         }).then(() => {
             this.sorted = []
             return this.getData(this.props.entityId)
@@ -98,7 +126,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
 
     protected add = async () => {
-        console.log("adding entity")
+        console.log(`${NAME} adding entity`)
         const ctx = {
             entityName: this.props.entityName,
             parentId: this.props.entityId
@@ -116,22 +144,85 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
 
     protected delete = async () => {
-        console.log("deleting address", this.state.selected)
+        if (DEBUG) console.log(`${NAME}: deleting address`, this.state.selected)
         this.state.selected.cata(() => Promise.resolve(),
             selected => {
-                return this.props.controller.delete!(selected)
-                    .then(() => {
-                        return this.refresh()
-                    })
+                if (this.props.controller.delete) {
+                    return this.props.controller.delete(selected)
+                        .then(result => {
+                            if (result)
+                                this.message({
+                                    level: "ERROR",
+                                    message: `Unable to delete address ${selected.name}: ${result}.`, removeAfter: 30
+                                })
+                            else {
+                                this.message({
+                                    level: "INFO",
+                                    message: `Deleted address ${selected.name}.`, removeAfter: 10
+                                })
+                                return this.refresh()
+                            }
+                        })
+                        .catch(e => {
+                            this.message({
+                                level: "ERROR",
+                                message: `Unable to delete address ${selected.name}.`, removeAfter: 30
+                            })
+                        })
+                }
+                else return Promise.resolve()
             })
     }
 
-    protected save = async () => {
-        console.log("saving address")
+    /** Reset editing flags from parent component--causes up to 2 renders. */
+    protected resetEditingFlags = () => {
+        this.props.setDirty(false)
+        this.props.setEditing(false)
+    }
+
+    /** Reset buffer to copy of selected if that's set. */
+    protected resetBuffer = () => {
+        this.setState({
+            buffer: this.state.selected.map(a => ({ ...a }))
+        })
+    }
+
+    protected save = () => {
+        console.log(`${NAME}.save`)
+        if (this.state.buffer.isNone() || this.state.changed.length === 0) return
+        // we have a buffer
+        return this.props.controller.save(this.state.buffer.some(), this.state.changed)
+            .then(result => {
+                if (result) {
+                    this.message({ level: "ERROR", message: result, removeAfter: 30 })
+                }
+                else {
+                    this.message({ level: "INFO", message: "Saved changes.", removeAfter: 10 })
+                    this.resetEditingFlags()
+                    this.refresh()
+                }
+            })
+    }
+
+    /**
+     * Handle a change in an attribute of the entity being edited. Updates
+     * buffer and sets dirty if its not already set.
+     */
+    protected handleChange = (id: string, value: any): void => {
+        if (DEBUG) console.log(`${NAME}.handleChange: id: `, id, "value: ", value)
+        this.setState({
+            buffer: this.state.buffer.map(b => ({ ...b, [id]: value })),
+            changed: [id, ...this.state.changed]
+        }, () => {
+            console.log("updated buffer is", this.state.buffer, this.state.changed)
+        })
+        if (!this.props.isDirty) this.props.setDirty(true)
     }
 
     protected discard = () => {
-        console.log("discard changes")
+        console.log(`${NAME}: discard changes`)
+        this.resetEditingFlags()
+        this.resetBuffer()
     }
 
     public componentDidMount() {
@@ -148,11 +239,17 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
             return this.props.addressRepo.fetchAddressesFor(entityId)
                 .then(addresses => {
                     const enriched = addresses.map(defaultEnhancer)
-                    if (DEBUG) console.log("Addresses", addresses, enriched)
+                    if (DEBUG) console.log(`${NAME}: Addresses`, addresses, enriched)
                     return setStatePromise(this,
                         {
                             items: enriched
-                        }).then(() => { })
+                        }).then(() => {
+                            this.onSelectionChanged()
+                        })
+                })
+                .catch(e => {
+                    if (DEBUG) console.log(`${NAME}: Error fetching addresses`, e)
+                    this.message({ level: "ERROR", message: "Unable to refresh addresses", removeAfter: 10 })
                 })
         }
         return Promise.resolve()
@@ -162,9 +259,32 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
         this._styles = getStyles(this.props.styles)
         this._classNames = getClassNames(this._styles, this.props.className)
         const isEditing = this.props.isEditing
-        const isDirty = this.props.isDirty || this.props.controller.hasChanges()
+        const isDirty = this.props.isDirty || this.state.changed.length > 0
         const canEdit = !isEditing && !isDirty
         const canCreate = !!this.props.controller.create
+        const canDelete =
+            !!this.state.selected &&
+            !!this.props.controller.canDelete &&
+            !!this.props.controller.delete &&
+            !isDirty &&
+            !isEditing
+
+        const detailProps = {
+            specification: this.props.specification,
+            setEditing: this.props.setEditing,
+            onChange: this.handleChange,
+            entity:
+                this.state.buffer
+                    .cata<CustomerAddressE | undefined>(() => undefined, e => e),
+            className: this._classNames.detail,
+        }
+        const masterProps = {
+            selection: this.selection,
+            items: this.state.items,
+            className: this._classNames.master,
+            onSort: this.onListShuffle,
+        }
+
         return (
             <FocusZone
                 // @ts-ignore
@@ -178,7 +298,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "Save",
                             name: "Save",
                             icon: "Save",
-                            disabled: !isEditing,
+                            disabled: !(isEditing || isDirty),
                             onClick: () => { this.save() }
 
                         },
@@ -194,9 +314,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "delete",
                             name: "Delete",
                             icon: "Delete",
-                            disabled: !!!this.state.selected ||
-                                (!!!this.props.controller.canDelete &&
-                                    !!!this.props.controller.delete),
+                            disabled: !canDelete,
                             onClick: () => this.delete()
 
                         },
@@ -204,6 +322,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "discard",
                             name: "Discard",
                             disabled: !isDirty,
+                            icon: "Undo",
                             onClick: () => this.discard(),
                         },
                         {
@@ -222,30 +341,15 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                     ]}
                 />
                 <div className={this._classNames.masterDetail}>
-                    <AddressList
-                        selection={this.selection}
-                        addresses={this.state.items}
-                        className={this._classNames.master}
-                    />
-                    {false &&
-                        <AddressDetail
-                            setEditing={this.props.setEditing}
-                            setDirty={this.props.setDirty}
-                            entity={this.state.selected}
-                            className={this._classNames.detail}
-                        />
+                    {
+                        this.props.onRenderMaster ?
+                            this.props.onRenderMaster(masterProps, defaultMasterRender) :
+                            defaultMasterRender(masterProps)
                     }
-                    {true &&
-                        <AddressDetailX.make
-                            specification={this.props.specification}
-                            setEditing={this.props.setEditing}
-                            setDirty={this.props.setDirty}
-                            entity={
-                                this.state.selected
-                                    .cata<CustomerAddressE | null>(() => null, e => e)
-                            }
-                            className={this._classNames.detail}
-                        />
+                    {
+                        this.props.onRenderDetail ?
+                            this.props.onRenderDetail(detailProps, defaultDetailRender) :
+                            defaultDetailRender(detailProps)
                     }
                 </div>
             </FocusZone >

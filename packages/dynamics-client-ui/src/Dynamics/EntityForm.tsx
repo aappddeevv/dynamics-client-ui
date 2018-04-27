@@ -13,6 +13,7 @@ import { Maybe } from "monet"
 import { XRM } from "./xrm"
 import Deferred from "./Deferred"
 import { getFormContextP } from "./Utils"
+import { Requireable } from "prop-types"
 
 /** A dynamics form attribute. Entity lookup by default. */
 export interface Attribute<T = Xrm.LookupValue> {
@@ -122,8 +123,8 @@ export interface FormInfo {
     notifier: Notifier
 }
 
-/** 
- * Extend these for your child's props using EntityFormChildProps or 
+/**
+ * Extend these for your child's props using EntityFormChildProps or
  * Partial<EntityFormChildProps>. Form attributes are also injected once
  * they are connected to the form.
  */
@@ -309,7 +310,7 @@ export class EntityForm<P extends EntityFormProps = EntityFormProps,
         this.forceUpdate()
     }
 
-    /** 
+    /**
      * For each value in a connected state, clear its value. The returned promise
      * may resolve prior to the next render or not.
      */
@@ -327,7 +328,6 @@ export class EntityForm<P extends EntityFormProps = EntityFormProps,
         const ename = entity.getEntityName()
         this.setState({
             stateCode: stateAttr ? stateAttr.getValue() : null,
-            //isActive: stateAttr ? stateAttr.getValue() === 0 : true,
             canChange: ui.getFormType() !== 3 ? true : false,
             entityId: entity.getId() ? cleanId(entity.getId()) : null,
             ename,
@@ -356,7 +356,6 @@ export class EntityForm<P extends EntityFormProps = EntityFormProps,
             React.Children.only(this.props.children),
             {
                 userId: userId ? cleanId(userId) : null,
-                //isActive: this.state.isActive,
                 canChange: this.state.canChange,
                 entityId: this.state.entityId,
                 entityName: this.state.entityName,

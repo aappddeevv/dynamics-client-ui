@@ -17,12 +17,17 @@ export const getStyles = memoizeFunction((
         },
         masterDetail: {
             display: "flex", // row
-            //flexWrap: "wrap",
+            //flexWrap: "wrap",            
         },
         master: {
             flexBasis: "50%",
             minWidth: 300,
             marginRight: 20,
+            selectors: {
+                "& .ms-List-cell": {
+                    borderBottom: "1px solid rgb(206,206,206)"
+                }
+            }
         },
         detail: {
             flexBasis: "50%",

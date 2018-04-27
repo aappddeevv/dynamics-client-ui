@@ -12,9 +12,10 @@ import {
     SelectionMode,
 } from "office-ui-fabric-react/lib/DetailsList"
 import {
-    SortingState, SortableDetailsList
+    SortingState, SortableDetailsList, SortableDetailsListProps,
 } from "@aappddeevv/dynamics-client-ui/lib/fabric/SortableDetailsList"
 import { CustomerAddress } from "../CustomerAddress/DataModel"
+import { EditorListProps } from "./AddressEditor.types"
 
 export const defaultColumns: Array<Partial<IColumn>> = [
     {
@@ -72,29 +73,24 @@ export const defaultSortState: SortingState = {
     name: { direction: "asc", position: 0, },
 }
 
-export interface AddressListProps {
-    className?: string | null
-    addresses: Array<CustomerAddress>
-    selection?: ISelection
-    onSort?: (items: Array<CustomerAddress>) => void
-    defaultSortState?: SortingState
-}
-
 /** Pure presentational component that displays an address list. */
-export function AddressList(props: AddressListProps): JSX.Element {
+export const AddressList: React.SFC<EditorListProps> = (props) => {
     return (
         <div className={css(props.className)}>
             <SortableDetailsList
                 defaultSortState={props.defaultSortState ? props.defaultSortState : defaultSortState}
                 selection={props.selection}
-                items={props.addresses}
+                items={props.items}
                 columns={defaultColumns}
                 allowSelection
                 onSort={props.onSort}
                 detailsListProps={{
                     selectionMode: SelectionMode.single
                 }}
+                {...props.sortableDetailsListProps}
             />
         </ div>
     )
 }
+
+AddressList.displayName = "AddressList"

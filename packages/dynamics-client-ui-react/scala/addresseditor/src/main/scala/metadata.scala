@@ -146,6 +146,10 @@ trait StringAttributeMetadata extends AttributeMetadata {
 }
 
 @js.native
+trait MemoAttributeMetadata extends StringAttributeMetadata {
+}
+
+@js.native
 trait LookupAttributeMetadata extends AttributeMetadata {
   /** Lookup types for the lookup. Is this encoded or a just a single logical name? */
   var Targets: String = js.native

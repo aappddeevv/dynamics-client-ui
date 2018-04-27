@@ -1,4 +1,4 @@
-/** 
+/**
  * Sortable details list using helpers.
  */
 import * as React from "react"
@@ -32,6 +32,10 @@ export {
     SortOrder, SortOrderState, OTHER,
 } from "./DetailsListHelpers"
 
+/**
+ * Props for SortableDetailsList.
+ * @deprecated Use`SortableDetailsListProps`.
+ */
 export interface Props<T> {
     className?: string
     /** Selection. This is *not* updated via setItems upon sort. See onSort. */
@@ -46,12 +50,15 @@ export interface Props<T> {
     /** Callback when sort state changes. */
     onSortStateChanged?: (s: Helpers.SortingState) => void
     /**
-     * Callback when this component sorts the items. 
+     * Callback when this component sorts the items.
      * You may need to update the selection object (setItems) if you maintain your own selection
      * object.
      */
     onSort?: (items: Array<T>) => void
 }
+
+/** The real interface. */
+export interface SortableDetailsListProps<T> extends Props<T> { }
 
 export interface State<T> {
     /** Sorting state. */
@@ -68,21 +75,21 @@ export interface State<T> {
     columns: IColumn[]
 }
 
-/** 
- * Maintains sorting state and sort data when requested. Columns can be augmented with 
+/**
+ * Maintains sorting state and sort data when requested. Columns can be augmented with
  * `data.sortAttribute` to specify the attribute to sort on otherwise it defaults
  * to `fieldName.` `data.isSortable=true/false` indicates whether a column can
- * be sorted on. defaultSortState can hold the initial sort state to provide e.g. 
+ * be sorted on. defaultSortState can hold the initial sort state to provide e.g.
  * `{ column1Key: { position: 0, direction: "asc"}}` indicates that column 1 (indicated
  * by the key column1Key), should be sorted first in ascending order. position indicates the
  * order/priority of the column sorts since you can sort on more than one column. A lower
  * position means that column is sorted before other columns with a lower position.
  * `data.sortAttribute` should indicate the attribute to sort on if its different than
  * fieldname.
- * 
- * The DetailsList component is wrapped in ScrollablePane and the header is made sticky. 
+ *
+ * The DetailsList component is wrapped in ScrollablePane and the header is made sticky.
  * The class name `sortableDeailsList` that helps you constrain the size of the list and is
- * marked with a `data-is-scrollable` attribute per github. 
+ * marked with a `data-is-scrollable` attribute per github.
  *
 * This component should be wrapped in a div with the `data-is-scrollable` set to true and
 * ensure that the scrollable pane or the outer container is sized and its position is
