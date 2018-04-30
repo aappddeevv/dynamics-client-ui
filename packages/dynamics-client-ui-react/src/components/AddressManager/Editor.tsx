@@ -49,9 +49,15 @@ export function addEditorState<P extends EditorProps>(component: React.Component
 export interface DataController<T> {
     /** 
      * Allow a delete or not. May be called a few times (not several) for the same 
-     * item so be efficient.
+     * item so be efficient. If a string is returned, you cannot delete and the 
+     * string is the message, otherwise, you can delete. If not present, but
+     * `delete`, then all addresses can be deleted. If you override this, call
+     * and process the `defaultCanDelete` as well.
+     *
+     * The idea is that this is called separately from delete to help improve UI
+     * effectiveness.
      */
-    canDelete?: (a: T) => Promise<boolean>
+    canDelete?: (a: T) => Promise<string|void>
 
     /** Can we deactivate an entity (soft delete)? */
     canDeactivate?: (a: T) => Promise<boolean>

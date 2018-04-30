@@ -119,13 +119,20 @@ export const directCopyProps = [
     "addresstypecode",
 ]
 
+/** Check address number. If 1 or 2, you cannot delete it. */
+export const defaultCanDelete = async (item: CustomerAddress): Promise<string|void> => {
+        const n = item.addressnumber
+        if(n && (n === 1 || n === 2)) return `Address '${item.name}' is a reserved address.`        
+        return Promise.resolve()
+}
+
 /**
  * Make a controller with some possible, but not all possible, customizations of its behavior.
  * If the "copy" from the internal "edit" buffer that is passed to save is insufficient, create a controller
  * using this function and simply overwrite `save`.
  */
 export function makeController(repo: CustomerAddressDAO, directCopyProps: Array<string>) {
-    const canDelete = async (item: CustomerAddress): Promise<boolean> => Promise.resolve(true)
+    const canDelete = defaultCanDelete
     return {
         canDeactivate: async (item: CustomerAddress) => {
             return false
@@ -133,12 +140,7 @@ export function makeController(repo: CustomerAddressDAO, directCopyProps: Array<
         create: (context: Record<string, any>) => {
             return repo.create(context.entityName, context.parentId)
         },
-        delete: async (a: CustomerAddress) =>
-            canDelete(a).then(allowed => {
-                return allowed ?
-                    repo.delete(a.customeraddressid) :
-                    Promise.resolve("Address may be in use, pre-allocated or you may not have permission.")
-            }),
+        delete: async (a: CustomerAddress) => repo.delete(a.customeraddressid),
         canDelete,
         isEditable: (id?: Id) => Promise.resolve(true),
         canEdit: (attributeId: string, id?: Id) => true,

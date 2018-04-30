@@ -73,7 +73,8 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
         }
         this.selection = new Selection({
             onSelectionChanged: this.onSelectionChanged,
-            canSelectItem: this.canSelectItem,
+            // only used on setItems, so useless in restricting selection
+            //canSelectItem: this.canSelectItem,
         })
     }
     private selection: ISelection
@@ -95,9 +96,12 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
             this.context.notifier.add(n)
     }
 
-    protected canSelectItem = (item: any): boolean => {
-        return !(this.props.isDirty || this.props.isEditing)
-    }
+    // protected canSelectItem = (item: any): boolean => {
+    //     const isBusy = this.props.isDirty || this.props.isEditing
+    //     if (isBusy && 
+    //         this.state.selected.map(a => a.customeraddressid === item.customeraddressid).orSome(false)) return false
+    //     return true
+    // }
 
     protected onSelectionChanged = (): void => {
         const item = firstOrElse<any, null>(this.selection.getSelection(), null)
@@ -145,7 +149,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
 
     protected delete = async () => {
         if (DEBUG) console.log(`${NAME}: deleting address`, this.state.selected)
-        this.state.selected.cata(() => Promise.resolve(),
+        const runDelete = () => this.state.selected.cata(() => Promise.resolve(),
             selected => {
                 if (this.props.controller.delete) {
                     return this.props.controller.delete(selected)
@@ -153,12 +157,12 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             if (result)
                                 this.message({
                                     level: "ERROR",
-                                    message: `Unable to delete address ${selected.name}: ${result}.`, removeAfter: 30
+                                    message: `Unable to delete address '${selected.name}': ${result}.`, removeAfter: 30
                                 })
                             else {
                                 this.message({
                                     level: "INFO",
-                                    message: `Deleted address ${selected.name}.`, removeAfter: 10
+                                    message: `Deleted address '${selected.name}'.`, removeAfter: 10
                                 })
                                 return this.refresh()
                             }
@@ -166,12 +170,33 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                         .catch(e => {
                             this.message({
                                 level: "ERROR",
-                                message: `Unable to delete address ${selected.name}.`, removeAfter: 30
+                                message: `Unable to delete address '${selected.name}'.`, removeAfter: 30
                             })
                         })
                 }
                 else return Promise.resolve()
             })
+        if(this.props.controller.canDelete && this.state.selected.isSome()) {
+            const deleteAllowed = await this.props.controller.canDelete(this.state.selected.some())
+            if(typeof deleteAllowed === "string") {
+                // not allowed!
+                this.message({
+                    level: "ERROR",
+                    message: deleteAllowed as string,
+                    removeAfter: 10,
+                })
+                return Promise.resolve()
+            }
+        } 
+        return runDelete()
+    }
+
+    protected disableSelection = () => {
+        this.selection.setChangeEvents(false, false)
+    }
+
+    protected enableSelection = () => {
+        this.selection.setChangeEvents(true, false)
     }
 
     /** Reset editing flags from parent component--causes up to 2 renders. */
@@ -234,6 +259,8 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     public componentWillReceiveProps(nextProps: AddressEditorProps, nextState: State) {
         if (nextProps.entityId !== this.props.entityId)
             this.getData(nextProps.entityId)
+        if(nextProps.isDirty || nextProps.isEditing) this.disableSelection()
+            else this.enableSelection()
     }
 
     protected getData = async (entityId?: Id | null): Promise<void> => {

@@ -319,7 +319,10 @@ export class CRMWebAPI {
         })
     }
 
-    /** This does not iterate through server paging so this can tell you zero or non-zero. */
+    /**
+     * This does not iterate through server paging so this can tell you zero or non-zero.
+     * THIS DOES NOT WORK! DO NOT USE!
+     */
     public GetCount = async (uri: URI, QueryOptions?: QueryOptions) => {
         var self = this
         return new Promise<number>(function (resolve, reject) {
@@ -464,6 +467,9 @@ export class CRMWebAPI {
         });
     }
 
+    protected cleanId = (id: string): string => id.replace(/[{}]/g, "")
+
+
     public ExecuteFunction = async (functionName: string, parameters: any,
         entityCollection: string | null = null,
         entityID: Id | null = null) => {
@@ -487,13 +493,13 @@ export class CRMWebAPI {
                 url = self.config.APIUrl + functionName + "(" + parmvars.join(",") + ")?" +
                     parmvalues.join("&");
                 if (entityCollection != null) url = self.config.APIUrl + entityCollection + "(" +
-                    entityID!.toString().replace(/[{}]/g, "") + ")" +
+                    self.cleanId(entityID!.toString()) + ")/" +
                     functionName +
                     "(" + parmvars.join(",") + ")?" + parmvalues.join("&")
             } else {
                 url = self.config.APIUrl + functionName + "()";
                 if (entityCollection != null) url = self.config.APIUrl + entityCollection + "(" +
-                    entityID!.toString().replace(/[{}]/g, "") + ")" +
+                    self.cleanId(entityID!.toString()) + ")/" +
                     functionName + "()"
             }
             self._log('ODataUrl', url)
