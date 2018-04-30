@@ -2,9 +2,6 @@
 // This software is licensed under the MIT License (MIT).
 // For more information see LICENSE or https://opensource.org/licenses/MIT
 
-// Copyright (c) 2018 The Trapelo Group LLC
-// This software is licensed under the MIT License (MIT).
-// For more information see LICENSE or https://opensource.org/licenses/MIT
 package dynamics.client.ui.react
 package addresseditor
 
@@ -29,7 +26,7 @@ import fabric.styling._ // some types
 import fabric.styling.Styling._
 import fabric.Utilities._
 
-import Renderers.{makeLabel, makeString, rendererArgs, makeSyntheticLookup, makeMemo}
+import Renderers._
 
 trait Attributes {
   val nameA: StringAttributeMetadata
@@ -39,28 +36,45 @@ trait Attributes {
   val telephone1A: StringAttributeMetadata
   val telephone2A: StringAttributeMetadata
   val telephone3A: StringAttributeMetadata
+  val faxA: StringAttributeMetadata    
   val cityA: StringAttributeMetadata
   val stateorprovinceA: StringAttributeMetadata
   val countryA: StringAttributeMetadata
   val postofficeboxA: StringAttributeMetadata
   val postalcodeA: StringAttributeMetadata
+  val upsZoneA: StringAttributeMetadata
+  val addressTypeCodeA: PickListAttributeMetadata
+  val shippingMethodCodeA: PickListAttributeMetadata
+  val freightTermsCodeA: PickListAttributeMetadata  
+
+  // all of these are option sets
+  // addressnumber (readonly)
 }
 
 class StandardAttributes(val specification: EditorSpecification) extends Attributes {
   val nameA = specification.metadata.attributesByName("name").asInstanceOf[StringAttributeMetadata]
   val line1A = specification.metadata.attributesByName("line1").asInstanceOf[StringAttributeMetadata]
   val line2A = specification.metadata.attributesByName("line2").asInstanceOf[StringAttributeMetadata]
-  val line3A = specification.metadata.attributesByName("line2").asInstanceOf[StringAttributeMetadata]
+  val line3A = specification.metadata.attributesByName("line3").asInstanceOf[StringAttributeMetadata]
   val telephone1A = specification.metadata.attributesByName("telephone1").asInstanceOf[StringAttributeMetadata]
   val telephone2A = specification.metadata.attributesByName("telephone2").asInstanceOf[StringAttributeMetadata]
   val telephone3A = specification.metadata.attributesByName("telephone3").asInstanceOf[StringAttributeMetadata]
+  val faxA = specification.metadata.attributesByName("fax").asInstanceOf[StringAttributeMetadata]  
   val cityA = specification.metadata.attributesByName("city").asInstanceOf[StringAttributeMetadata]
   val stateorprovinceA = specification.metadata.attributesByName("stateorprovince").asInstanceOf[StringAttributeMetadata]
   val countryA = specification.metadata.attributesByName("country").asInstanceOf[StringAttributeMetadata]
   val postofficeboxA = specification.metadata.attributesByName("postofficebox").asInstanceOf[StringAttributeMetadata]
-  val postalcodeA = specification.metadata.attributesByName("postalcode").asInstanceOf[StringAttributeMetadata]    
+  val postalcodeA = specification.metadata.attributesByName("postalcode").asInstanceOf[StringAttributeMetadata]
+  val upsZoneA = specification.metadata.attributesByName("upszone").asInstanceOf[StringAttributeMetadata]  
+  val addressTypeCodeA = specification.metadata.attributesByName("addresstypecode").asInstanceOf[PickListAttributeMetadata]
+  val shippingMethodCodeA = specification.metadata.attributesByName("shippingmethodcode").asInstanceOf[PickListAttributeMetadata]
+  val freightTermsCodeA = specification.metadata.attributesByName("freighttermscode").asInstanceOf[PickListAttributeMetadata]
+  
 }
 
+/**
+ * Controls to be rendered per react render lifecycle. Minimized overhead.
+ */
 class StandardControls(
   specification: EditorSpecification,
   valueopt: Option[CustomerAddress],
@@ -121,6 +135,11 @@ class StandardControls(
     AttributeControls(makeLabel(telephone3A),
       makeString(rendererArgs(telephone3A, onChange))), onChange)
 
+  val faxControl = Attribute[String](faxA,
+    JSExtractors.string(faxA)(valueopt),
+    AttributeControls(makeLabel(faxA),
+      makeString(rendererArgs(faxA, onChange))), onChange)
+
   val postofficeboxControl = Attribute[String](postofficeboxA,
     JSExtractors.string(postofficeboxA)(valueopt),
     AttributeControls(makeLabel(postofficeboxA),
@@ -129,7 +148,22 @@ class StandardControls(
   val postalcodeControl = Attribute[String](postalcodeA,
     JSExtractors.string(postalcodeA)(valueopt),
     AttributeControls(makeLabel(postalcodeA),
-      makeString(rendererArgs(postalcodeA, onChange))), onChange)    
+      makeString(rendererArgs(postalcodeA, onChange))), onChange)
+
+  val upsZoneControl = Attribute[String](upsZoneA,
+    JSExtractors.string(upsZoneA)(valueopt),
+    AttributeControls(makeLabel(upsZoneA),
+      makeString(rendererArgs(upsZoneA, onChange))), onChange)
+
+  val addressTypeCodeControl = Attribute[Int](addressTypeCodeA,
+    JSExtractors.int(addressTypeCodeA)(valueopt),
+    AttributeControls(makeLabel(addressTypeCodeA),
+      makeOptionSet(addressTypeCodeA, onChange)), onChange)
+
+  // we need to make sure that we get the deep metadata for
+  // freighttermscode
+  // shippingmethodcode
+
 }
 
 class StandardDetailContent(
@@ -152,5 +186,7 @@ class StandardDetailContent(
     make(telephone1Control),
     make(telephone2Control),
     make(telephone3Control),
+    make(faxControl),
+    make(addressTypeCodeControl)
   )
 }

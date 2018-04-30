@@ -67,8 +67,8 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
         super(props)
         this.state = {
             items: [],
-            selected: Maybe.None(),
-            buffer: Maybe.None(),
+            selected: Maybe.None<T>(),
+            buffer: Maybe.None<T>(),
             changed: [],
         }
         this.selection = new Selection({
@@ -101,9 +101,10 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
 
     protected onSelectionChanged = (): void => {
         const item = firstOrElse<any, null>(this.selection.getSelection(), null)
+        const selected = Maybe.fromNull<T>(item)
         this.setState({
-            selected: Maybe.fromNull<T>(item),
-            buffer: Maybe.fromNull<T>({ ...item }),
+            selected,
+            buffer: selected.isSome ? Maybe.pure<T>({ ...item }) : Maybe.None(),
             changed: [],
         })
         if (DEBUG) console.log(`${NAME}.onSelectionChanged`, this.selection.getSelection())
@@ -111,7 +112,6 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
 
     protected onSort = (items: Array<CustomerAddressE>): void => {
         // when subcompoent sorts, update Selection object but don't clear selections
-        console.log("onSort")
         this.selection.setItems(items, false)
     }
 
@@ -180,7 +180,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
         this.props.setEditing(false)
     }
 
-    /** Reset buffer to copy of selected if that's set. */
+    /** Reset buffer to copy of selected or None. */
     protected resetBuffer = () => {
         this.setState({
             buffer: this.state.selected.map(a => ({ ...a }))
@@ -211,7 +211,9 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     protected handleChange = (id: string, value: any): void => {
         if (DEBUG) console.log(`${NAME}.handleChange: id: `, id, "value: ", value)
         this.setState({
-            buffer: this.state.buffer.map(b => ({ ...b, [id]: value })),
+            buffer: this.state.buffer.map(b => ({ ...b, [id]: value }))
+                // @ts-ignore: buffer is copy and more!, actually this should never happen!
+                .orElse(Maybe.pure<T>({ [id]: value })),
             changed: [id, ...this.state.changed]
         }, () => {
             console.log("updated buffer is", this.state.buffer, this.state.changed)
@@ -258,6 +260,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     public render() {
         this._styles = getStyles(this.props.styles)
         this._classNames = getClassNames(this._styles, this.props.className)
+        const hasSelection = this.selection.getSelectedCount() > 0
         const isEditing = this.props.isEditing
         const isDirty = this.props.isDirty || this.state.changed.length > 0
         const canEdit = !isEditing && !isDirty
@@ -274,8 +277,10 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
             setEditing: this.props.setEditing,
             onChange: this.handleChange,
             entity:
-                this.state.buffer
-                    .cata<CustomerAddressE | undefined>(() => undefined, e => e),
+                (hasSelection ?
+                    this.state.buffer.cata<CustomerAddressE | undefined>(() => undefined, e => e) :
+                    undefined
+                ),
             className: this._classNames.detail,
         }
         const masterProps = {

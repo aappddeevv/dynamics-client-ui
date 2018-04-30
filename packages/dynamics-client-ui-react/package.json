@@ -167,6 +167,7 @@
         "xmldom": "^0.1.27",
         "xmlserializer": "^0.6.0",
 	"recompose": "^0.27.0",
+	        "react-content-loader": "^3.1.1",
 	"@aappddeevv/dynamics-client-ui": "^0.1.0-M1"
 
     }

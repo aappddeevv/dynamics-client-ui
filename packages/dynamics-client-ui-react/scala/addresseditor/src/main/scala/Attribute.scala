@@ -70,7 +70,8 @@ object Attribute {
         }
 
         div(new DivProps {
-          className = cn.root
+          className = css(cn.root, s"ttg-Attribute-${attribute.EntityLogicalName}-${attribute.LogicalName}")
+          id = s"${attribute.EntityLogicalName}_${attribute.LogicalName}"
         })(
           Status(),
           controls.label(Renderers.simpleLabelContext(cn.label)),
@@ -88,7 +89,7 @@ object Attribute {
         width = "100%"
         justifyContent = "inherit"
       }
-      label = new IRawStyle {
+      label =  new IRawStyle {
         minWidth = 150
         flex = "none"
         display = "flex"
@@ -149,19 +150,21 @@ object Attribute {
           customStyles.flatMap(_.root)
         ),
         "label" -> stylearray(
-          "ttg-Label",
+          "ttg-Attribute-label",
           customStyles.flatMap(_.label)
         ),
         "control" -> stylearray(
-          "ttg-Control",
+          "ttg-Attribute-control",
           customStyles.flatMap(_.control),
           customStyles.flatMap(_.focus),
           customStyles.flatMap(_.hover),          
         ),
         "edit" -> stylearray(
+          "ttg-Attribute-control-edit",
           customStyles.flatMap(_.edit)
         ),
         "display" -> stylearray(
+          "ttg-Attribute-control-display",
           customStyles.flatMap(_.display)
         )
       ))

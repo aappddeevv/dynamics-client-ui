@@ -2,7 +2,8 @@ import * as ReactDOM from "react-dom"
 import * as React from "react"
 import { Fabric } from "office-ui-fabric-react/lib/Fabric"
 import { IStyle, mergeStyles } from "office-ui-fabric-react/lib/Styling"
-import { Client, mkClient, Id, Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import { Client, mkClient, Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import {  Metadata, Attribute, EnumAttributeTypes } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
 import { EntityForm } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
 import { getXrmP } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/getXrmP"
 import { AddressEditorProps, EditorListProps, EditorDetailProps, } from "./AddressEditor.types"
@@ -28,6 +29,9 @@ export interface AddressEditorRunProps {
     styles?: IStyle
     /** outer div */
     className?: string | null
+
+    /** Provide a client */
+    client?: Client
 
     /** Provide a reop */
     addressRepo?: CustomerAddressDAO
@@ -55,7 +59,8 @@ export interface AddressEditorRunProps {
 
     /** 
      * Render the editor yourself if providing a custom `addressEditorProps` 
-     * does not cut it for you.
+     * does not cut it for you. This is wrapped in a promise because you
+     * may need to asynchronously create your render function.
      */
     onRenderEditor?: IRenderFunction<Omit<AddressEditorProps, EditorProps>>
 }
@@ -78,7 +83,15 @@ export const defaultAttributeSpecification = [
     { name: "postofficebox", position: 10 },
 ]
 
-/** Perform a dynamics search using `Xrm.Utility.lookupObjects`. */
+/** 
+ * Perform a dynamics search using `Xrm.Utility.lookupObjects`.
+ * Promise errors are propagated and not handled. Xrm returns
+ * an err object if you try to add but have not selected anything,
+ * an empty array if you hit cancel or an array of Xrm.LookupValue
+ * if you selected one or more values. Map the error to an empty
+ * array so that performSearch provides "seleted something" or
+ * "selected" nothing semantics regardless.
+ */
 export const performSearch = (xrm: XRM, entities: Array<string>,
     allowMultiple: boolean): PerformSearchResult => {
     // @ts-ignore: bad @types/Xrm typing
@@ -86,10 +99,13 @@ export const performSearch = (xrm: XRM, entities: Array<string>,
         allowMultiSelect: allowMultiple || false,
         entityTypes: entities
     }).then(result => {
+        if (DEBUG) console.log("AddressEditorRunner.performSearch: raw result", result)
         return result
-    }, err => {
-        return undefined
     })
+        .catch(err => {
+            if (DEBUG) console.log("AddressEditorRunner.performSearch: raw result:", err)
+            return []
+        })
 }
 
 /** 
@@ -145,18 +161,39 @@ export function makeController(repo: CustomerAddressDAO, directCopyProps: Array<
     }
 }
 
+/** 
+ * Retrieve entity metadata for customeraddress and expanding out the standard
+ * attributes that are actually PickLists.
+ */
+export async function getEditorEntityMetadata(metadata: Metadata): Promise<EditorEntityMetadata> {
+    return makeEntityMetadata("customeraddress", metadata)
+    .then (m => {
+        // setup what we need in an array and Promise.all them....do that soon :-)
+        const addressTypeP = metadata.lookupEnumAttribute("customeraddress", "addresstypecode", 
+        EnumAttributeTypes.PickList)
+        return addressTypeP
+        .then(atp => {
+            return {
+                ...m,
+                attributesById: { ...m.attributesById, [atp!.MetadataId]: atp  as Attribute},
+                attributesByName: { ...m.attributesByName, [atp!.LogicalName]: atp as Attribute },             
+            }
+        })
+    })
+}
+
 /**
  * Runner which allows some but not all possible, customizations of the basic editing display.
  */
 export function run(props: AddressEditorRunProps) {
-    if (DEBUG) console.log("Calling AddressEditorRunner..run")
+    if (DEBUG) console.log("Calling AddressEditorRunner.run")
     getXrmP().then(xrm => {
-        const client = mkClient(xrm, API_POSTFIX)
+        const client = props.client || mkClient(xrm, API_POSTFIX)
         const repo: CustomerAddressDAO = props.addressRepo || new CustomerAddressDAOImpl(client)
         const className = mergeStyles(props.className, defaultStyles, props.styles)
         const sec = new Security(client)
-        const metadatap = makeEntityMetadata("customeraddress", repo.metadata)
-
+        const metadatap = getEditorEntityMetadata(repo.metadata)
+    
         const x = sec.userPrinicpalAccessForRecord(xrm.Utility.getGlobalContext().getUserId(),
             "contact", xrm.Page.data.entity.getId())
         x.then(s => console.log("x", s))
@@ -193,10 +230,14 @@ export function run(props: AddressEditorRunProps) {
                 </Fabric>,
                 target)
         }
-        metadatap
-            .then(m => { if (props.target) renderit(props.target, m) })
-            .catch(e => {
-                console.log("AddressEditor: Unable to retrieve metadata", e)
-            })
+
+        Promise.all([metadatap])
+        .then(asyncs => {
+            const m = asyncs[0]
+            if (props.target) renderit(props.target, m)
+        })
+        .catch(e => {
+            console.log("AddressEditor: Unable to retrieve metadata", e)
+        })        
     })
 }

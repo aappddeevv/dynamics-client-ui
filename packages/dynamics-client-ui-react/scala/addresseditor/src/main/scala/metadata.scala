@@ -8,6 +8,7 @@ package addresseditor
 import scala.scalajs.js
 import js._
 import annotation._
+import js.Dynamic.{literal => jsobj}
 
 /**
  * @see https://docs.microsoft.com/en-us/dynamics365/customer-engagement/web-api/localizedlabel?view=dynamics-ce-odata-9
@@ -21,12 +22,12 @@ trait LocalizedLabel extends js.Object {
 }
 
 /** 
- * Typically a Label or Description.
+ * Typically used for a Label or Description.
  * 
  * @see https://docs.microsoft.com/en-us/dynamics365/customer-engagement/web-api/label?view=dynamics-ce-odata-9
  */
 @js.native
-trait LocalizedInfo extends js.Object {
+trait Label extends js.Object {
   val LocalizedLabels: UndefOr[js.Array[LocalizedLabel]] = js.native
   val UserLocalizedLabel: UndefOr[LocalizedLabel]        = js.native
 }
@@ -34,18 +35,18 @@ trait LocalizedInfo extends js.Object {
 object LocalizedHelpers {
 
   /** Get user localized label. If absent, use lcid, if absent, return None */
-  def label(info: LocalizedInfo, lcid: Option[Int] = None): Option[String] =
+  def label(info: Label, lcid: Option[Int] = None): Option[String] =
     labelForUser(info) orElse lcid.flatMap(i => findByLCID(i, info)).map(_.Label)
 
   /** Return the label for the user localized label or None. */
-  def labelForUser(info: LocalizedInfo): Option[String] =
+  def labelForUser(info: Label): Option[String] =
     info.UserLocalizedLabel.map(_.Label).toOption
 
   /** 
    * Return the localized label (based on lcid) then the user localized label
    * then None.
    */
-  def findByLCID(lcid: Int, info: LocalizedInfo): Option[LocalizedLabel] =
+  def findByLCID(lcid: Int, info: Label): Option[LocalizedLabel] =
     info.LocalizedLabels.toOption.flatMap(_.find(_.LanguageCode == lcid)) orElse
       info.UserLocalizedLabel.toOption
 }
@@ -96,8 +97,8 @@ trait AttributeMetadata extends MetadataBase {
          //var    AttributeTypeName: { Value: String }
   var    ColumnInt: Int = js.native
   var    DatabaseLength: Int | Null = js.native
-  var    Description: LocalizedInfo
-  var    DisplayName: LocalizedInfo
+  var    Description: Label
+  var    DisplayName: Label
   /** Entity this attribute belongs. */
   var    EntityLogicalName: String = js.native
   /** Undocumented. */
@@ -179,4 +180,104 @@ trait DateTimeAttributeMetadata extends AttributeMetadata {
 trait DoubleAttributeMetadata extends AttributeMetadata {
   var MinValue:  Double = js.native
   var MaxValue:  Double = js.native
+}
+
+object OptionSetType {
+  val PickList = 0
+  val State = 1
+  val Status = 2
+  val Boolean = 3
+}
+
+@js.native
+trait OptionSetMetadataBase extends MetadataBase {
+  var OptionSetType: Int
+}
+
+/** 
+ * A custom structure to old an optionset pair.  For convenience, the value can
+ * also be formatted as a string when creaed to allow better UI display.
+ */
+trait OptionValue extends js.Object {
+  val value: Int
+  val valuestr: String
+  val label: String
+}
+
+
+@js.native
+trait OptionMetadata extends MetadataBase {
+  var Value: Int
+  var Label: Label
+  var Description: Label
+  var Color: String
+  var IsManaged: Boolean
+  /** undocumented ??? */
+  var ExternalValue: Boolean
+  var HasChanged: Boolean
+}
+
+@js.native
+trait OptionSetMetadata extends OptionSetMetadataBase {
+  var Description: Label
+  var ExternalTypeName: String
+  var DisplayName: Label
+  var HasChanged: Boolean
+  var IsGlobal: Boolean
+  var IsManaged: Boolean
+  var Options: js.Array[OptionMetadata]
+  var Name: String
+}
+
+@js.native
+trait EnumAttributeMetadata extends AttributeMetadata {
+}
+
+/** 
+ * To have the key fields filled out you must use `$expand` in the web api query
+ * and cast to a Microsoft.Dynamics.CRM.PicklistAttributeMetadata.  Each expand
+ * must also have `$select=options`.
+ */
+@js.native
+trait PickListAttributeMetadata extends EnumAttributeMetadata {
+  /** Nav property, avaliable if you add $expand. */
+  var GlobalOptionSet: OptionSetMetadata
+  /** Nav property, available if you add $expand. */
+  var OptionSet: OptionSetMetadata
+}
+
+object metadata {
+
+  /** Make labels easier to use. */
+  implicit class RichLabel(label: Label) {
+    /** Obtain the label string from a Label. */
+    def label: String = LocalizedHelpers.label(label).getOrElse("no label")
+    /** Obtain the label string from a Label and lcsid or fallback to user label. */
+    def label(lcsid: Int): String = LocalizedHelpers.findByLCID(lcsid, label).map(_.Label).getOrElse("no label")
+  }
+
+  implicit class RichPickListAttributeMetadata(m: PickListAttributeMetadata) {
+    /** Get the option set preferring OptionSet over GlobalOptionSet. */
+    def optionSet: OptionSetMetadata =
+      if(m.GlobalOptionSet == null) m.OptionSet
+      else m.GlobalOptionSet
+
+    /** Extract out the option set in a form ready for user forms. */
+    def optionValues: js.Array[OptionValue] = 
+      optionSet.Options.map { osm =>
+        new OptionValue {
+          val value = osm.Value
+          val valuestr = osm.Value.toString
+          val label = osm.Label.label
+        }
+      }
+
+    /** Incredibly specific to fabric :-) */
+    def keyAndText: js.Array[js.Object] =
+      optionValues.map(ov => jsobj(
+        "key" -> ov.value,
+        "text" -> ov.label
+      ))
+  }
+
 }

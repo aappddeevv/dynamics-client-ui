@@ -90,12 +90,12 @@ object Status {
     mergeStyleSets[StatusClassNames](
       styleset(
         "root" -> stylearray(
-          "ttg-Status",
+          "ttg-Attribute-status",
           className,
           customStyles.flatMap(_.root)
         ),
         "label" -> stylearray(
-          "ttg-StatusLabel",
+          "ttg-Atribute-status-label",
           customStyles.flatMap(_.label)
         )
     ))

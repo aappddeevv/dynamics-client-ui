@@ -131,10 +131,12 @@ export interface _Client_IN_PROGRESS_ {
 }
 
 /**
- * Defaults to XMLHTTPRequest. Automatically revives dates.
+ * Access dynamics data. Defaults to XMLHTTPRequest for the underlying transport. Automatically revives dates
+ * and turns them to date objects.
  *
  * @todo Add the ability to issue pure http query so we can fetch full links provided
  * in some odata responses.
+ * @todo Allow per-request date reviving.
  */
 export class CRMWebAPI {
 

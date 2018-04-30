@@ -4,7 +4,7 @@
  * can get all the addresses via nav property Account_CustomerAddress/
  * Contact_CustomerAddress.
  */
-import { Client, Id, Metadata, MetadataProvider } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import { Client, Id, Metadata, MetadataProvider, ClientProvider } from "@aappddeevv/dynamics-client-ui/lib/Data"
 export * from "./DataModel"
 import { CustomerAddress } from "./DataModel"
 import { DEBUG } from "BuildSettings"
@@ -31,7 +31,7 @@ export const defaultAttributes = [
 ]
 
 /** DAO for obtaining customeraddresses. Entity: customeraddress. */
-export interface CustomerAddressDAO extends MetadataProvider {
+export interface CustomerAddressDAO extends MetadataProvider, ClientProvider {
     fetchAddressesFor<T extends CustomerAddress = CustomerAddress>(parentId: string): Promise<Array<T>>
     /** Create an address, return its "representation". Requires a parent entity name and parent id */
     create<T extends CustomerAddress = CustomerAddress>(entityName: string, parentId: Id): Promise<T>
@@ -42,13 +42,14 @@ export interface CustomerAddressDAO extends MetadataProvider {
 
 export class CustomerAddressDAOImpl implements CustomerAddressDAO, MetadataProvider {
     constructor(client: Client, metadata?: Metadata) {
-        this.client = client
+        this._client = client
         this.meta = metadata ? metadata : new Metadata(client)
     }
     protected meta: Metadata
-    protected client: Client
+    protected _client: Client
 
     public get metadata(): Metadata { return this.meta }
+    public get client(): Client { return this._client }
 
     public delete = async (id: Id): Promise<string | void> => {
         return this.client.Delete("customeraddresses", id)

@@ -4,7 +4,9 @@
 
 import scala.scalajs.js
 import js.annotation._
+import js.JSConverters._
 
+/** Convert a value, possible null or undefined, to a scala Option. */
 @JSExportTopLevel("ScalaOption")
 object ScalaOptionForJS {
   @JSExport
@@ -21,4 +23,18 @@ object ScalaOptionForJS {
   @JSExport
   def fold[A, B](opt: Option[A], ifEmpty: js.Function0[B], f: js.Function1[A, B]): B =
     opt.fold(ifEmpty())(a => f(a))
+}
+
+/** Create a scala function given a js function. */
+@JSExportTopLevel("ScalaFunc")
+object ScalaFuncForJS {
+  @JSExport def func0[A](f: js.Function0[A]) = js.Any.toFunction0(f)
+  @JSExport def func1[P1, A](f: js.Function1[P1, A]) = js.Any.toFunction1(f)
+  @JSExport def func2[P1,P2,A](f: js.Function2[P1, P2, A]) = js.Any.toFunction2(f)
+}
+
+/** Create a scala Seq from an array. */
+@JSExportTopLevel("ScalaSeq")
+object ScalaSeqForJS {
+  @JSExport def seq[A](a: js.Array[A]) = a.toSeq
 }

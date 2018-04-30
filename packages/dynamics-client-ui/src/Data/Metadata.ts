@@ -88,6 +88,7 @@ export interface AttributeRequiredLevelManagedProperty {
     ManagedPropertyLogicalName: string
 }
 
+/** This should be renamed LocalizedLabel. */
 export interface Localized {
     HasChanged: boolean | null
     IsManaged: boolean
@@ -96,7 +97,7 @@ export interface Localized {
     MetadataId: string
 }
 
-/** The type of descrciptions, labels and names. */
+/** The type of descrciptions, labels and names. This shouldd be name Label. */
 export interface LocalizedLabels {
     UserLocalizedLabel: Localized
     LocalizedLabels: Array<Localized>
@@ -176,6 +177,45 @@ export interface StringAttribute extends Attribute {
 export interface LookupAttribute extends Attribute {
     /** Array of logical entity names that can be looked up. */
     Targets: Array<string>
+}
+
+export interface OptionMetadata extends MetadataBase {
+    /** Int */
+    Value: number
+    Label: Localized
+    Description: Localized
+    Color: string
+    IsManaged: boolean
+    HasChanged: boolean
+}
+
+export interface OptionSetMetadata {
+    Description: Localized
+    DisplayName: Localized
+    IsGlobal: boolean
+    IsMangaed: boolean
+    Name: string
+    Options: OptionMetadata
+}
+
+export interface EnumAttributeMetadata extends Attribute {
+}
+
+/** For use in `lookupEnumAttribute` */
+export enum EnumAttributeTypes {
+    MultiSelectPickList = "Microsoft.Dynamics.CRM.MultiSelectPickListAttributeMetadata",
+    PickList = "Microsoft.Dynamics.CRM.PicklistAttributeMetadata",
+    Status = "Microsoft.Dynamics.CRM.StatusAttributeMetadata",
+    State = "Microsoft.Dynamics.CRM.StateAttributeMetadata",
+    EntityName = "Microsoft.Dynamics.CRM.EntityNameAttributeMetadata",
+}
+
+/**
+ * You get these fields if you "$expand" on each and "$select=Options"
+ */
+export interface PickListAttributeMetadata extends EnumAttributeMetadata {
+    OptionSet: OptionSetMetadata
+    GlobalOptionSet: OptionSetMetadata
 }
 
 /** [entity name] => {[attribute name]: Attribute} */
@@ -283,7 +323,12 @@ export class Metadata {
         return getLabel(labels, this.lcid)
     }
 
-    /** Get all attributes for a logical entity name or return [] */
+    /**
+     * Get all attributes for a logical entity name or return []
+     * This does not get the attribute as a specific type hence
+     * it does not know about or expand interesting attributes e.g.
+     * GlobalOptionSet in PickListAttributeMetadata.
+     */
     public getAttributes = async (entityName: string): Promise<Array<Attribute>> => {
         // quick wins and cache check
         if (!entityName) {
@@ -327,13 +372,42 @@ export class Metadata {
         }
         if (!entityName || !attributeName) return null
         await this.getAttributes(entityName)
-        // attribtse for entityName should be in "cache"
+        // attributes for entityName should be in "cache"
         const entityAttributes = entityToAttribute[entityName]
         if (entityAttributes) {
             const attribute = entityAttributes[attributeName]
             if (attribute) return attribute
         }
         return null
+    }
+
+    /**
+     * Lookup an attribute as a specific type and return all type specific fields for that attribute.
+     * Result is not cached! You must provide the specific type.
+     */
+    public lookupEnumAttribute = async <T=Attribute>(entityName: string, attributeName: string,
+        castTo: EnumAttributeTypes): Promise<EnumAttributeMetadata | null> => {
+        const emeta = await this.getMetadata(entityName)
+        if (!emeta) return null
+        const ameta = await this.lookupAttribute(entityName, attributeName)
+        if (!ameta) return null
+        const qopts: QueryOptions = {
+            // no Select, get all attributes again
+            Path: [
+                {
+                    Property: `Attributes(${ameta.MetadataId!})`,
+                    Type: castTo,
+                },
+            ],
+            Expand: [{
+                Property: "OptionSet",
+                Select: ["Options"],
+            }, {
+                Property: "GlobalOptionSet",
+                Select: ["Options"],
+            }]
+        }
+        return this.client.Get<PickListAttributeMetadata>("EntityDefinitions", emeta.MetadataId, qopts)
     }
 
     /** Returns all entity {LogicalName, ObjectTypeCode} pairs. */

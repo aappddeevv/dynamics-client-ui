@@ -3,7 +3,8 @@ import { compose, withState, withHandlers, ComponentEnhancer } from "recompose"
 import { Omit } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/interfaces"
 import { Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
 import { EntityDefinition, Attribute, Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
-import { normalizeWith } from "@aappddeevv/dynamics-client-ui/lib/Data/Utils"
+import { Client, normalizeWith } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import { pathOr } from "ramda"
 
 /** What the output of [addEditorState] will receive as input. */
 export interface EditorProps {
@@ -80,6 +81,8 @@ export interface DataController<T> {
 
 /**
  * Entity metadata of the entity being edited.
+ *
+ * We need variance attributes on attributesByid and attributesByName.
  */
 export interface EditorEntityMetadata {
     /** core entity definition */
@@ -88,7 +91,8 @@ export interface EditorEntityMetadata {
     attributes: Array<Attribute>
     /** 
      * by metadata id, guaranteed unique in
-     * case editing more than one entity with same attribute name.
+     * case editing more than one entity with same attribute name. Individual attributes may have been
+     * expanded e.g. Attribute => PickListAttributeMetadata with OptionSet expanded.
      */
     attributesById: Record<string, Attribute>
     /** By logical name. For a single entity, should be unique. */
@@ -97,10 +101,13 @@ export interface EditorEntityMetadata {
 
 /**
  * Create a EditorEntityMetadata needed to drive an editor centered on a single entity.
+ * If your metadata has special fetch needs, such as expanding specific attributes so that their
+ * full metadata is retrieved, e.g. PickListAttributeMetadata expanding OptionSet and GlobalOptionSet,
+ * you should do that here.
  * @param entityName 
  * @param metadata 
  */
-export function makeEntityMetadata(entityName: string, metadata: Metadata): Promise<EditorEntityMetadata> {
+export async function makeEntityMetadata(entityName: string, metadata: Metadata): Promise<EditorEntityMetadata> {
     return metadata.getMetadata(entityName)
         .then(ed => {
             return metadata.getAttributes(entityName)
@@ -111,6 +118,24 @@ export function makeEntityMetadata(entityName: string, metadata: Metadata): Prom
                     attributesByName: normalizeWith("LogicalName", attrs),
                 }))
         })
+}
+
+/**
+ * Create a value mapper from an entity with two attributes. Use this only on small lookup domains.
+ * @param entitySetName Entity set name to form the lookup.
+ * @param lookup Attribute lookup logical name. This is the "fk" typically found in the entity record.
+ * @param result Attribute result logical name. This is the resulting value to display in the UI.
+ */
+export async function makeValueMapper(client: Client, entitySetName: string, 
+    lookup: string, result: string): Promise<(value: string) => string> {
+    const qopts = {
+            Select: [lookup, result]
+        }
+    return client.GetList<any>(entitySetName, qopts)
+    .then(r => {
+        const mapped =  normalizeWith(lookup, r.List)
+        return (value: string) => pathOr(value, [value, result], mapped)    
+    })
 }
 
 export interface AttributeSpecification {
@@ -134,9 +159,11 @@ export interface EditorSpecification {
     metadata: EditorEntityMetadata
     /** 
      * A function that initiates a UI specific search if its not 
-     * built into the UI control itself.
+     * built into the UI control itself. Errors should be propagated 
+     * downstream for end-of-world handling.
      */
     performSearch: (entities: Array<string>, allowMultiple?: boolean) => PerformSearchResult
 }
 
-export type PerformSearchResult = PromiseLike<Array<Xrm.LookupValue> | void>
+/** Empty array => no selection, otherwise new selection. */
+export type PerformSearchResult = PromiseLike<Array<Xrm.LookupValue>>

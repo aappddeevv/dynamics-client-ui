@@ -23,9 +23,12 @@ import ttg.react.{implicits, fabric, vdom, _}
 import fabric.{styling, components, _}
 import components._
 import styling._
+import Styling._
 import implicits._
 import vdom.{tags, _}
 import tags._
+
+import metadata._
 
 /** Value controls for display and editing. */
 case class ValueControls[T](
@@ -54,6 +57,14 @@ object CustomerAddressControlsFactory {
   // e.g. making country ar statoeorprovince a lookup not a string
 }
 
+/**
+ * When the attribute "value" needs to be rendere, it gets this context.  This
+ * does not include the attribute itself since if you are creating the
+ * ValueRenderer, you already know which attribute you are working with. The
+ * value change notification methods, started, cancelled, and changed, use a
+ * church encoding of EditingStatus but are already curried with the necessary
+ * attribute id.
+ */
 trait RendererContext[T] {
   /**
    * Optional value to render. Controls should handle non-values of course
@@ -64,8 +75,11 @@ trait RendererContext[T] {
   /** Classname to apply to the control, typically the outer container. */
   def className: Option[String]
 
+  /** Editing has started. */
   def started(): Unit
+  /** Editing was cancelled. */
   def cancelled(): Unit
+  /** Editing resulted in a changed value. */
   def changed(value: Option[T]): Unit
 }
 
@@ -105,7 +119,12 @@ trait MakeRendererArgs[+T <: AttributeMetadata] extends js.Object {
 /**
  * Factory based on the "type" of control. From the JS, the return value is
  * really only usable in scala.js. The rendered controls have various "data-*"
- * properties set based on AttributeMetadata.
+ * properties set based on AttributeMetadata. All metadata needs should have
+ * been satisfied prior to using these functions since they typically run inside
+ * a react render.
+ * 
+ * Note that TextField has a natural 12x left and right padding, so to keep all
+ * the values align on the left, we have to finesse some fo the styles.
  */
 @JSExportTopLevel("Renderers")
 object Renderers {
@@ -179,13 +198,12 @@ object Renderers {
         new ITextFieldProps {
           //defaultValue = context.value.getOrElse[String]("")
           value = context.value.getOrElse[String]("")
-          className = js.defined(context.className.getOrElse(""))
+          className = context.className.orUndefined
           placeholder = "---"
           borderless = true
           maxLength = args.attribute.MaxLength
           onFocus = js.defined { fevent =>
-            //context.onStatusChange(Started(args.attribute.LogicalName))
-            println(s"${args.attribute.LogicalName}.onFocus")
+            //println(s"${args.attribute.LogicalName}.onFocus")
             context.started()
           }
           onBlur = js.defined{ fevent =>
@@ -216,105 +234,168 @@ object Renderers {
     ValueControls(display, edit)
   }
 
+  /** Make a memo control = multi-line string editor. */
   def makeMemo(args: MakeRendererArgs[MemoAttributeMetadata], nlines: Int = 5): ValueControls[String] = {
     makeString(args, nlines)
   }
 
-  /**
-   * We use a textfield and a lookup button to the right and call the Xrm.openLookup() function
-   * to open the lookup and handle the results.
-   * 
-   * @todo make internal styles using `mergeStyles`.
-   */
-  @JSExport
-  def makeLookup(attribute: LookupAttributeMetadata,
-  initiateSearch: () => js.Promise[js.UndefOr[LookupValue]]): ValueControls[js.Any] = {
-    val display: ValueRenderer[js.Any] = context => {
-      Label()("not implemented")
-    }
+  // /**
+  //  * We use a textfield and a lookup button to the right and call the Xrm.openLookup() function
+  //  * to open the lookup and handle the results.
+  //  * 
+  //  * @todo make internal styles using `mergeStyles`.
+  //  */
+  // @JSExport
+  // def makeLookup(attribute: LookupAttributeMetadata,
+  //   initiateSearch: () => js.Promise[js.UndefOr[LookupValue]]): ValueControls[js.Any] = {
+  //   val dataid = makeDataProps(attribute)
 
-    val edit: ValueRenderer[js.Any] = context => {
-      div(new DivProps{
-        style = new IRawStyle {
-          display = "flex"
-        }
-      })(
-        TextField(new ITextFieldProps {
-          value = context.value.map(_.toString).getOrElse[String]("---")
-        })(),
-        IconButton(new IButtonProps {
-          iconProps = new IIconProps { iconName = "Search" }
-          onClick = js.defined(_ => initiateSearch())          
-        })()
-      )
-    }
-    ValueControls(display, edit)
-  }
+  //   val display: ValueRenderer[js.Any] = context => {
+  //     Label()("not implemented")
+  //   }
 
+  //   val edit: ValueRenderer[js.Any] = context => {
+  //     div(new DivProps{
+  //       style = new IRawStyle {
+  //         display = "flex"
+  //       }
+  //     })(
+  //       TextField(new ITextFieldProps {
+  //         value = context.value.map(_.toString).getOrElse[String]("---")
+  //       })(),
+  //       IconButton(new IButtonProps {
+  //         iconProps = new IIconProps { iconName = "Search" }
+  //         onClick = js.defined(_ => initiateSearch())          
+  //       })()
+  //     )
+  //   }
+  //   ValueControls(display, edit)
+  // }
 
   /** 
    * Lookup control for attributes that are stored as strings in a dynamics
    * entity but whose value comes from a lookup on another, potentially large,
-   * entity.
+   * entity. `initiateSearch` can use any information available to it to perform
+   * and search and set a value. Since this function is typically called inside
+   * the code that makes a detail form component, `initiateSearch` is typically
+   * a curried function and the paramater here is really just a trigger.
+   * 
+   * An optional valueMapper can synchronously map value selected by the lookup
+   * to other values that are displayed. If the key is not a string, `toString`
+   * is used.
    */ 
   @JSExport
-  def makeSyntheticLookup(attribute: StringAttributeMetadata,
-    initiateSearch: () => Future[Option[LookupValue]]): ValueControls[String] = {
+  def makeSyntheticLookup(attribute: StringAttributeMetadata, initiateSearch: => Future[Unit],
+    valueMapper: js.Function1[String, String] = identity): ValueControls[String] = {
+    val dataid = makeDataProps(attribute)
+    val dataIsFocusable = jsobj("data-is-focusable" -> "true")
 
-    val display: ValueRenderer[String] = context => div(null)
+    val display: ValueRenderer[String] =
+      context => div("makeSyntheticLookup.display: not implemented")
 
     val edit: ValueRenderer[String] = context => {
+      // if map, map the value
+      val valuestr = context.value.map(v => valueMapper(v.toString))
+      val displayValue = valuestr.getOrElse[String]("---")
 
-      val dosearch = () =>
-      initiateSearch()
-        .recover {
-          case scala.util.control.NonFatal(e) => None
-        }
-        .foreach{ _ match {
-          case Some(lookupValue) =>
-            val valueopt = Option(lookupValue.name).filterTruthy
-            val changed = context.value =!= valueopt
-            //println(s"${attribute.LogicalName}.lookup result old: ${context.value}, new: $valueopt, changed: $changed")
-            if(changed) context.changed(valueopt)
-            else context.cancelled()
-          case _ =>
-            context.cancelled()
-        }}
-
-      div(new DivProps{
-        style = new IRawStyle {
-          display = "flex"
-        }
-      })(
+      div(merge[DivProps](
+        new DivProps{
+          className = context.className.orUndefined
+          style = new IRawStyle {
+            display = "flex"
+          }
+        },
+        dataid,
+        dataIsFocusable))(
+        // show a value
         Label(new ILabelProps {
           style = new IRawStyle {
-            width = 200 // this should not be needed!!!
+            paddingLeft = 12
+            paddingRight = 12
+            flex = "1 1 auto"
           }
-        })(
-          context.value.map(_.toString).getOrElse[String]("---")
-        ),
+        })(displayValue),
+        // initiate search
         IconButton(new IButtonProps {
           iconProps = new IIconProps { iconName = "Search" }
-          onClick = js.defined(_ => dosearch())
+          onClick = js.defined(_ => initiateSearch)
+        })(),
+        // clear button
+        IconButton(new IButtonProps {
+          iconProps = new IIconProps{ iconName = "Clear" }
+          onClick = js.defined{_ =>
+            context.started()
+            context.changed(None)
+          }})()
+      )
+    }
+    ValueControls(display, edit)
+  }
+
+  /** Dropdown option representing "no choice" */
+  val nullDropdownOption = jsobj("key" -> -1, "text" -> "---")
+
+  /**
+   * Render as a dropdown control, not a picker. Automatically adds a "null"
+   * option.
+   */
+  @JSExport
+  def makeOptionSet(attribute: PickListAttributeMetadata, _onStatusChange: js.Function1[EditingStatus, Unit]): ValueControls[Int] = {
+    val dataid = makeDataProps(attribute)
+    val dataIsFocusable = jsobj("data-is-focusable" -> "true")
+
+    //js.Dynamic.global.console.log("option set attribute", attribute)
+    val display: ValueRenderer[Int] = context => {
+      div("option set not implemented")
+    }
+
+    // -1 is an invalid option set value
+    def makeOptionsWithNullOption(): js.Array[js.Object] =
+      js.Array(nullDropdownOption.asJsObj) ++ attribute.keyAndText
+
+    val edit: ValueRenderer[Int] = context => {
+      val _defaultSelectedKey = context.value.getOrElse[Int](-1)
+      //println(s"className ${context.className}, ${_defaultSelectedKey}, ${context.value}")
+      div(merge[DivProps](
+        new DivProps {
+        className = context.className.orUndefined
+        },
+        dataid,
+        dataIsFocusable))(
+        // ouch! classname applied to Dropdown is applied to the inner div!
+        Dropdown(new IDropdownProps {
+          placeholder = "---"
+          options = makeOptionsWithNullOption()
+          defaultSelectedKey = _defaultSelectedKey
+          onChanged = js.defined { (option, maybeIdx ) =>
+            //js.Dynamic.global.console.log("selected option", option)
+            if(option.key.asInt == -1) context.changed(None)
+            else context.changed(Some(option.key.asInt))
+            ()
+          }
         })()
       )
     }
-
     ValueControls(display, edit)
   }
+
 }
 
 /**
- * We need general purpose reader/writers into the underlying js.Object.
+ * We need general purpose reader/writers into the underlying js.Object. Watch
+ * out for underlying values being null.
  */
 object JSExtractors {
   /**
    * Can this be derived from StringAttributeMetadata directly for the odata case? I don't think so.
    */
   def string(attribute: StringAttributeMetadata, field: Option[String] = None): Extractor[js.Object, String] =
-    objopt => objopt.flatMap(_.asDict[String|Null].get(field.getOrElse(attribute.LogicalName)).flatMap(_.toNonNullOption))
+    objopt => objopt.flatMap(_.asDict[String].get(field.getOrElse(attribute.LogicalName))).toNonNullOption
+
+  def int(attribute: AttributeMetadata, field: Option[String] = None): Extractor[js.Object, Int] =
+    objopt => objopt.flatMap(_.asDict[Int].get(field.getOrElse(attribute.LogicalName))).toNonNullOption
 
   /** Extract a date from an object, could be a date or a string depending on the reviver used. */
   def date(attribute: DateTimeAttributeMetadata, field: String): Extractor[js.Object, js.Date] =
-    objopt => objopt.flatMap(_.asDict[js.Date].get(field))
+    objopt => objopt.flatMap(_.asDict[js.Date].get(field)).toNonNullOption
 }

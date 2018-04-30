@@ -24,9 +24,10 @@ export const getStyles = memoizeFunction((
             minWidth: 300,
             marginRight: 20,
             selectors: {
-                "& .ms-List-cell": {
-                    borderBottom: "1px solid rgb(206,206,206)"
-                }
+                // the underline is not always consistent on the display
+                // "& .ms-List-cell": {
+                //     borderBottom: "1px solid rgb(206,206,206)"
+                // }
             }
         },
         detail: {
