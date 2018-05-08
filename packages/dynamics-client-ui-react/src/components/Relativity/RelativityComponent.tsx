@@ -242,14 +242,17 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
 
     static extractId = (key) => key.split(":")[1]
 
+    /** Make a key like "ent:id:right" */
     static mkEntityKey = (id, right) => `ent:${id}:${right}`
     static extractEntR = new RegExp("(^ent):(.+):.+$")
+    /** Extract entity id from a key made with `mkEntityKey`. */
     static extractEnt = (key) => {
         const res = RelativityComponent.extractEntR.exec(key)
         if (res) return res[2]
         return null
     }
 
+    /** Make a key like: "rel:relname:parentid:right" */
     static mkRelKey = (rel, parentId, right) => `rel:${rel}:${parentId}:${right}`
     static extractRelR = new RegExp("(^rel):(.+):(.+):.+$")
     static extractRel = (key) => {
@@ -273,29 +276,20 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
 
         // return if already expanded, we don't need to retrieve the same data again
         if (node.wasExpanded || treeNode.props.isLeaf) {
-            this.forceUpdate()
+            //this.forceUpdate()
             return Promise.resolve(node)
         }
 
         return this.getData(node.id, node.entityName).
             then(stuff => {
                 node.wasExpanded = true
-                this.forceUpdate()
+                //this.forceUpdate()
                 return node
             }).
             catch(e => {
                 console.log("Error loading tree data on demand", node, e)
                 this.reportDataError()
             })
-    }
-
-    protected onExpand = (keyPath, ctx) => {
-        if (DEBUG) console.log("expand", keyPath, ctx)
-        //this.setState({expandedKeys: keyPath})
-    }
-
-    protected onSelect = (p, ctx) => {
-        if (DEBUG) console.log("select", p, ctx)
     }
 
     /**
@@ -317,7 +311,8 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
         const edgesByRole: Record<string, Array<Edge>> = R.groupBy(R.prop("label"), edges) as any
         //if (DEBUG) console.log(`${this.displayName}.renderByRole: edges grouped by roles`, edgesByRole)
         const nextlevel = level + 1
-        const ppath = path.concat([node])
+        // concatenate the node id
+        const ppath = path.concat([node.id])
         return Object.keys(edgesByRole).
             sort().
             map(role => {
@@ -332,11 +327,12 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
                 const pairs =
                     R.sortBy(n => n[1].sortKey, dedupedEdges.map((e: Edge) => [e, this.graphDb.getNode(e.target)]))
                 const key = RelativityComponent.mkRelKey(role, node.id, level)
+                const pathWithRole = [...ppath, role]
                 const tn =
                     <TreeNode title={title || role} key={key} isLeaf={false} disabled={false}>
                         {
                             pairs.length > 0 ?
-                                pairs.map(p => this.renderTreeNode(p[1], node, nextlevel, ppath, p[0] as Edge)) :
+                                pairs.map(p => this.renderTreeNode(p[1], node, nextlevel, pathWithRole, p[0] as Edge)) :
                                 null
                         }
                     </TreeNode>
@@ -354,13 +350,13 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
      * @param edge The edge that this node is being rendered under. Root node renders under role null.
      */
     protected renderTreeNode = (node: Node, parent: Node | null = null, level: number = 0, path: any[] = [], edge: Edge | null = null) => {
-        // if (DEBUG) console.log(`${this.displayName}.renderTreeNode`,
-        //     "\nnode", node,
-        //     "\nparent", parent,
-        //     "\nlevel", level,
-        //     "\npath", path,
-        //     "\nedge", edge)
-        // if (DEBUG) this.graphDb.printit()
+        if (DEBUG) console.log(`${this.displayName}.renderTreeNode`,
+            "\nnode", node,
+            "\nparent", parent,
+            "\nlevel", level,
+            "\npath", path,
+            "\nedge", edge)
+        if (DEBUG) this.graphDb.printit()
         if (level > this.state.maxLevels) return null
 
         const isLeaf: boolean = (level > 0 && node.id === this.state.root.id) || path.includes(node.id)
@@ -426,14 +422,10 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
                 />
                 <Tree
                     className={this._classNames.tree}
-                    selectable
+                    selectable={false}
                     showLine
-                    defaultExpandedKeys={["root"]}
                     showIcon={false}
-                    defaultExpandAll={true}
                     loadData={this.onLoadData}
-                    onExpand={this.onExpand}
-                    onSelect={this.onSelect}
                 >
                     {this.state.root ? this.renderTreeNode(this.state.root) : null}
                 </Tree>

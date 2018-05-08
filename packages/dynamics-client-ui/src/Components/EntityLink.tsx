@@ -19,12 +19,16 @@ import { IRenderFunction } from "@uifabric/utilities/lib/IRenderFunction"
 
 export interface EntityLinkRenderProps extends
     Partial<React.AnchorHTMLAttributes<HTMLAnchorElement>> {
-    onClick?: (e: any) => void
+    //onClick?: (e: any) => void
 }
 
 export interface Props {
+    /** Entity name (=logical name) */
     entityName: string
+
+    /** Entity id. GUID, without braces. */
     id: string
+
     /**
      * Open in new window. This is the dyanmics parameter passed through.
      * The problem with setting this false and using openForm is that history
@@ -34,8 +38,16 @@ export interface Props {
     windowPosition?: number
     height?: number
     width?: number
+    /** Handle single click. */
     onClick?: (e: any) => void
+
+    /** Handle double click */
+    onDoubleClick?: (e: any) => void
+
+    /** Xrm if available. */
     xrm?: XRM
+
+    /** Classname for outer div. */
     className?: string
     /**
      * Render the actual link. In that case, the value of this react class
@@ -44,23 +56,26 @@ export interface Props {
     onRenderLink?: IRenderFunction<EntityLinkRenderProps>
     /**
      * Some of these props may not matter because the onClick handler is set to
-     * open a dynamics form via `Navigation.openForm`.
+     * open a dynamics form via `Navigation.openForm` by default.
      */
     anchorProps?: Partial<React.AnchorHTMLAttributes<HTMLAnchorElement>>
     /**
-     * Skips calling openForm (which is the default). This props.onClick will
+     * Skips calling openForm. props.onClick will
      * still be called. Default is false. If true, you need to pass in href via
      * anchorProps for anything to happen.
      */
     skipOpenForm?: boolean
+
     /** Passed directly to Navigation.openForm. Takes precedence over this props. */
     openFormOptions?: Partial<Xrm.Navigation.EntityFormOptions>
+
     /** Passed directly to Navigation.openForm. Takes precedence over this props. */
     openFormParameters?: any
 }
 
 export const defaultHref = "#"
 
+/** Default render link function. Renders an anchor tag. */
 export function renderLink(props: EntityLinkRenderProps): JSX.Element {
     const allprops = { ...{ href: defaultHref }, ...props }
     const { children, ...rest } = allprops
@@ -119,7 +134,7 @@ export class EntityLink extends React.Component<Props, any> {
         const { className, children } = this.props
         const renderProps = {
             ...this.props.anchorProps,
-            className: cx("crmLink", className),
+            className: cx("crmLink", "ttg-EntityLink", className),
             onClick: this.handleClick,
             children,
         }
