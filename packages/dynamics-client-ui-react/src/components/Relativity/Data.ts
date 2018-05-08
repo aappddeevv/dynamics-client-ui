@@ -4,9 +4,12 @@
  * TODO: Separate out the metadata parts into another class.
  */
 
-import { Metadata, ConnectionRole, ConnectionRoleCategory } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import {
+    Metadata, ConnectionRole, ConnectionRoleCategory, In, ClientProvider,
+    ExpandQueryOptions,
+} from "@aappddeevv/dynamics-client-ui/lib/Data"
 const R = require("ramda")
-import { Node, ConnectionEdge, Edge } from "./nodes"
+import { Node, Edge, } from "./nodes"
 import { cleanId, Client } from "@aappddeevv/dynamics-client-ui"
 import { DEBUG } from "BuildSettings"
 
@@ -35,8 +38,11 @@ export const defaultRelativitySelect = [
 
 /**
  * Access `connection` data for an entity. Confusingly, `DataSource` fetches entities.
+ * Contains a few basic data fetch calls mostly centered around some metadata but also
+ * connections since connections are a fundamental building block to model any
+ * relationship.
  */
-export interface RelativityDAO {
+export interface RelativityDAO extends ClientProvider {
     /**
      * Lookup the object type code and return the entityName. Since object type codes
      * should come from server-side data only, throw an exception if it is not found.
@@ -46,19 +52,26 @@ export interface RelativityDAO {
     /**
      * Generate children and labels for the right side of the connection.
      * Uses the right side of the connection to set the Edge label. All of
-     * source sides (left) of the connections should be fromId but that is
+     * source sides (left) of the connections returned should be fromId but that is
      * not checked.
+     * @param fromId Left (from) side entity.
      */
     processConnections(fromId: string, connections: Array<Connection>): Promise<NodesAndEdges>
 
     /**
      * Fetch connections for specific connection role ids. Supports self-referencing
-     * relationships as well although that should be rare.
+     * relationships as well although that should be rare. The entity can represent
+     * either the left (record1) or right side (record2) of the relationship and
+     * roleIds are always for the opposite side unless both left and right are true.
+     * Connection objects are *not* prepped using `prepConnection`.
      *
+     * @param entityId Dynamics entity id of the from or to. See left, right.
+     * @param entityName Entity name *not* the entity set name.
      * @param roleIds List of role ids (not names) to find. Get these from metadata.
      * @param select attributes to return.
-     * @param left true, force entityId to match on the left side.
-     * @param righ true, forec entitId to match on the right side
+     * @param left true, force entityId to match on the left side. Default is true.
+     * @param right true, force entitId to match on the right side. Default is false.
+     * @param masterOnly true, only return master connectionss. Default is false.
      */
     fetchRelativityConnections(entityId: string,
         entityName: string,
@@ -66,16 +79,21 @@ export interface RelativityDAO {
         opts?: {
             select?: Array<string>,
             left?: boolean,
-            right?: boolean
+            right?: boolean,
+            masterOnly?: boolean,
         }): Promise<Array<object>>
 
     /** Return all [{category, role}] pairs given role category names. See global option set Category. */
     categoryRoleNamesToRoles(roleCategoryNames: Array<string>):
         Promise<Array<{ category: ConnectionRoleCategory, role: ConnectionRole }>>
 
-    /** Return an entity given its id and singular logical name or return null. */
+    /** Return an entity given its id and singular logical name or return null. Options allow you to select 
+     * the attributes to return and the properties to expand.
+     * @param select Select attributes
+     * @param expand Properties to expand e.g. collections. Expanded in place, not just @odata.nextlink returned.
+    */
     getEntity<T>(id: string, entityName: string, opts?: {
-        select?: Array<string>, nav?: Array<any> | any
+        select?: Array<string>, expand?: Array<ExpandQueryOptions>
     }): Promise<T | null>
 
 }
@@ -85,24 +103,30 @@ export interface RelativityDAOImplOpts {
     metadata: Metadata
 }
 
+/** Default option for `fetchRelativityConnectons`. */
 export const DefaultFetchOpts = {
     left: true,
     right: false,
     select: defaultRelativitySelect,
+    masterOnly: false
 }
 
-/** A few basic data fetch calls. */
-export class RelativityDAOImpl implements RelativityDAO {
+const NAME = "RelativityDAOImpl"
+
+/** Default implementation. */
+export class RelativityDAOImpl implements RelativityDAO, ClientProvider {
 
     constructor(client: Client, opts: Partial<RelativityDAOImplOpts>) {
-        this.client = client
+        this._client = client
         this.metadata = opts.metadata ? opts.metadata : new Metadata(client)
         if (opts.chunkSize) this.chunkSize = opts.chunkSize
     }
 
     protected chunkSize: number = 5
-    protected client: Client
+    protected _client: Client
     protected metadata: Metadata
+
+    get client(): Client { return this._client }
 
     /**
      * Lookup the object type code and return the entityName. Since object type codes
@@ -126,12 +150,15 @@ export class RelativityDAOImpl implements RelativityDAO {
                 return this.lookupTypeCode(grouped[k][0].right.objectTypeCode).
                     then(entityName => new Node(k,
                         grouped[k][0].right.id,
-                        entityName))
+                        grouped[k][0].right.id, entityName))
             }))
         // create edges
         const edges = connections.map(conn =>
-            new ConnectionEdge(fromId, conn.right.id, conn.right.roleStr, conn.id))
-        if (DEBUG) console.log("processConnections", connections, nodes, edges)
+            new Edge(conn.id, fromId, conn.right.id, conn.right.roleStr))
+        if (DEBUG) console.log(`${NAME}.processConnections`,
+            "\nconnections", connections,
+            "\nnodes", nodes,
+            "\nedges", edges)
         return { nodes, edges }
     }
 
@@ -141,14 +168,15 @@ export class RelativityDAOImpl implements RelativityDAO {
         opts?: {
             select?: Array<string>,
             left?: boolean,
-            right?: boolean
+            right?: boolean,
+            masterOnly?: boolean,
         }) {
         const popts = { ...DefaultFetchOpts, ...opts }
         const splits: Array<Array<Promise<any>>> =
             R.splitEvery(this.chunkSize, roleIds).
                 map(someRoleIds =>
                     this.fetchRelativityConnectionsChunk(entityId, entityName, someRoleIds,
-                        popts.select, popts.left, popts.right))
+                        popts.select, popts.left, popts.right, popts.masterOnly))
         return Promise.all(R.flatten(splits)).then(r => R.flatten(r))
     }
 
@@ -160,24 +188,28 @@ export class RelativityDAOImpl implements RelativityDAO {
         roleIds: Array<string>,
         select: Array<string> = defaultRelativitySelect,
         left: boolean = true,
-        right: boolean = false) {
-        const leftRoleFilter = roleIds.
-            map(roleid => `(_record1roleid_value eq ${roleid})`).join(" or ")
+        right: boolean = false,
+        masterOnly: boolean = false) {
 
-        const rightRoleFilter = roleIds.
-            map(roleid => `(_record2roleid_value eq ${roleid})`).join(" or ")
+        const leftRoleFilter = In("record1roleid", roleIds)
+        const rightRoleFilter = In("record2roleid", roleIds)
+        const filter = (left && right) ?
+            `(${leftRoleFilter} or ${rightRoleFilter})` :
+            ((left && !right)) ? leftRoleFilter : rightRoleFilter
 
         const leftId = left ? `_record1id_value eq ${entityId}` : null
         const rightId = right ? `_record2id_value eq ${entityId}` : null
-        const leftOrRightId = (left && right) ?
-            `${leftId} or ${rightId}` :
+        const id = (left && right) ?
+            `(${leftId}) or (${rightId})` :
             ((left && !right) ? leftId : rightId)
+
         const qopts = {
             FormattedValues: true,
-            Filter: //`(ismaster eq ${isMaster}) and ` +
-                `(${leftOrRightId}) and ` +
+            Filter:
+                (masterOnly ? `ismaster eq true and ` : "") +
+                `(${id}) and ` +
                 "(statecode eq 0) and " +
-                `(${leftRoleFilter} or ${rightRoleFilter})`,
+                filter,
             Select: select.length > 0 ? select : undefined,
         }
         return this.client.GetList("connections", qopts).
@@ -202,15 +234,15 @@ export class RelativityDAOImpl implements RelativityDAO {
 
     /** Get an entity given its id and singular name or return null. */
     public async getEntity<T>(id: string, entityName: string, opts?: {
-        select?: Array<string>, nav?: Array<any> | any
+        select?: Array<string>, expand?: Array<any> | any
     }) {
-        const popts = { select: [], nav: null, ...opts }
+        const popts = { select: [], expand: null, ...opts }
         const n = await this.metadata.getEntitySetName(entityName)
         if (!n) return null
         const qopts = {
             FormattedValues: true,
             Select: popts.select && popts.select.length > 0 ? popts.select : undefined,
-            Expand: popts.nav ? (Array.isArray(popts.nav) ? popts.nav : [popts.nav]) : undefined,
+            Expand: popts.expand ? (Array.isArray(popts.expand) ? popts.expand : [popts.expand]) : undefined,
         }
         return this.client.Get<T>(n, id, qopts)
     }
@@ -221,11 +253,13 @@ export default RelativityDAOImpl
 export interface NodesAndEdges {
     nodes: Array<Node>
     edges: Array<Edge>
+    /** @deprecated */
     authoritative?: boolean
 }
 
 export const EmptyNodesAndEdges = { nodes: [], edges: [] }
 
+/** One end point of a connectin. */
 export interface ConnectionEnd {
     id: string
     objectTypeCode: number
@@ -235,7 +269,11 @@ export interface ConnectionEnd {
     roleStr: string
 }
 
-/** dynamics connection object. */
+/** 
+ * Standardized data model for a connection in the Relativity app.
+ * Contains a breakout for the left and right sides based on
+ * record1 and record2 respectively.
+ */
 export interface Connection {
     id: string
     createdOn: number
@@ -247,13 +285,16 @@ export interface Connection {
     right: ConnectionEnd
     /** @deprecated Use left or right. */
     display: ConnectionEnd
-    reciprocalId: string
+    /** The id of the connection that is the reciprocal (non-master), if there is one. Could be null. */
+    reciprocalId: string | null
+    /** When a two-way connection is created, one side may be considered the master. */
     isMaster: boolean
     originalRecord: Record<string, any>
 }
 
 /**
- *  Convert a raw dynamics connection to a domain object with right and left broken out into objects.
+ * Convert a raw dynamics connection to a domain object with right and left broken out into objects
+ * named "right" and "left".
  */
 export function prepConnection(c: Record<string, any>, meId?: string): Connection {
     const left = {

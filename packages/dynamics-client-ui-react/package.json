@@ -32,6 +32,8 @@
         "url": "git+https://github.com/aappddeevv/dynamics-client-ui"
     },
     "devDependencies": {
+	            "@types/rc-tree": "^1.10.0",
+
 	    "typedoc": "^0.11.1",
         "@types/chai": "^4.0.10",
         "@types/jest": "^22.0.0",
@@ -104,7 +106,6 @@
                 "@types/classnames": "^2.2.3",
         "@types/cytoscape": "^3.1.5",
         "@types/debounce": "^1.0.0",
-        "@types/immutability-helper": "^2.0.15",
         "@types/js-beautify": "0.0.31",
         "@types/jsrender": "0.0.29",
         "@types/lodash": "^4.14.104",
@@ -138,7 +139,7 @@
         "office-ui-fabric-react": "^5.60.0",
         "prop-types": "^15.6.0",
         "randomcolor": "^0.5.3",
-        "rc-tree": "^1.7.8",
+        "rc-tree": "^1.11.1",
         "react": "^16.3.1",
         "react-aria": "^0.9.2",
         "react-big-calendar": "^0.17.0",

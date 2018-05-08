@@ -306,7 +306,6 @@ let connectionRoleObjectTypeCodes: Array<ConnectionRoleObjectTypeCode> = []
 /** Cache that indexes by a connection role's id. */
 const connectionRoleObjectTypeCodesByRoleId: Map<Id, Array<ConnectionRoleObjectTypeCode>> = new Map()
 
-
 /**
  * Metadata API. Fetched metadata is shared among all instances of this class at the moment.
  */
@@ -437,8 +436,8 @@ export class Metadata {
 
     /** Pass in the entity singular logical name. Returns null if not found. Pulls all attributes but no navs. */
     public getMetadata = async (entityName: string): Promise<EntityDefinition | null> => {
-        if (DEBUG) console.log(`Metadata.getMetadata: entity name ${entityName}`)
         const cacheCheck = entityNameToDefinition.get(entityName)
+        if (DEBUG) console.log(`Metadata.getMetadata: entity name ${entityName}, cache check:`, cacheCheck, entityNameToDefinition.size)
         if (cacheCheck) return cacheCheck
 
         const qopts = {
@@ -453,7 +452,10 @@ export class Metadata {
                 // add to cache
                 const edef: EntityDefinition = r.List[0]
                 entityDefinitions.push(edef)
-                entityNameToDefinition.set(entityName, edef)
+                if (!entityNameToDefinition.has(entityName)) {
+                    entityNameToDefinition.set(entityName, edef)
+                    //console.log("Metadata.getMetadata: added entity ", entityName, edef)
+                }
                 return edef
             })
     }

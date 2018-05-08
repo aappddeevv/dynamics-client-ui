@@ -43,7 +43,6 @@
         "@types/classnames": "^2.2.3",
         "@types/cytoscape": "^3.1.5",
         "@types/debounce": "^1.0.0",
-        "@types/immutability-helper": "^2.0.15",
         "@types/js-beautify": "0.0.31",
         "@types/jsrender": "0.0.29",
         "@types/lodash": "^4.14.104",

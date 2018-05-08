@@ -1,8 +1,6 @@
 
-import { run } from "./RelativityView"
+import { run } from "./RelativityViewRunner"
 
-
-// shim support
 if (process.env.NODE_ENV !== "production" &&
     typeof runmain !== "undefined" && runmain) {
     window.addEventListener("load", () => {

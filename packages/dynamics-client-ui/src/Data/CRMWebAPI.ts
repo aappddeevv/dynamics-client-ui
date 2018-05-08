@@ -87,10 +87,12 @@ export interface QueryOptionBase {
 
 export interface ExpandQueryOptions extends QueryOptionBase {
     Property: string
+    Select?: Array<string>
+    Filter?: string
 }
 
 export interface QueryOptions extends QueryOptionBase {
-    Expand?: ExpandQueryOptions[]
+    Expand?: Array<ExpandQueryOptions>
     FetchXml?: string
     IncludeCount?: boolean
     Skip?: number
@@ -273,10 +275,10 @@ export class CRMWebAPI {
         })
     }
 
-    /** Issue a http fetch directly. The response is JSON parsed but not restructured. */
-    public Fetch = async (url: string, QueryOptions?: QueryOptions, method?: string): Promise<any> => {
+    /** Issue a http fetch directly. The response is JSON parsed but not restructured. No paging. */
+    public Fetch = async <T=any>(url: string, QueryOptions?: QueryOptions, method?: string): Promise<T> => {
         const self = this
-        return new Promise((resolve, reject) => {
+        return new Promise<T>((resolve, reject) => {
             self.fetch(self.config, method ? method : "GET", url, {
                 'headers': self._BuildQueryHeaders(QueryOptions ? QueryOptions : null, self.config)
             }, (err, res) => {
@@ -556,19 +558,19 @@ export class CRMWebAPI {
             if (queryOptions.OrderBy != null) qs.push("$orderby=" + encodeURI(queryOptions.OrderBy.join(",")))
             if (queryOptions.Filter != null) qs.push("$filter=" + encodeURI(queryOptions.Filter))
             if (queryOptions.Expand != null) {
-                var expands: string[] = []
-                queryOptions.Expand.forEach(function (ex: any) {
-                    if ((ex.Select != null) || (ex.Filter != null) || (ex.OrderBy != null) || (ex.Top != null)) {
+                let expands: string[] = []
+                queryOptions.Expand.forEach(function (ex: ExpandQueryOptions) {
+                    if (ex.Select || ex.Filter || ex.OrderBy || ex.Top) {
                         var qsExpand: string[] = []
-                        if (ex.Select != null) qsExpand.push("$select=" + ex.Select.join(","))
-                        if (ex.OrderBy != null) qsExpand.push("$orderby=" + ex.OrderBy.join(","))
-                        if (ex.Filter != null) qsExpand.push("$filter=" + ex.Filter)
-                        if (ex.Top > 0) qsExpand.push("$top=" + ex.Top)
+                        if (ex.Select) qsExpand.push("$select=" + ex.Select.join(","))
+                        if (ex.OrderBy) qsExpand.push("$orderby=" + ex.OrderBy.join(","))
+                        if (ex.Filter) qsExpand.push("$filter=" + ex.Filter)
+                        if (ex.Top && ex.Top > 0) qsExpand.push("$top=" + ex.Top)
                         expands.push(ex.Property + "(" + qsExpand.join(";") + ")")
                     }
                     else
                         expands.push(ex.Property)
-                });
+                })
                 qs.push("$expand=" + encodeURI(expands.join(",")))
             }
             if (queryOptions.IncludeCount) qs.push("$count=true")

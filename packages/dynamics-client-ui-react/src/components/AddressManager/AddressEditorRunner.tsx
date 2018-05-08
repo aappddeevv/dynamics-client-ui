@@ -5,7 +5,7 @@ import { IStyle, mergeStyles } from "office-ui-fabric-react/lib/Styling"
 import { Client, mkClient, Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
 import {  Metadata, Attribute, EnumAttributeTypes } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
 import { EntityForm } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
-import { getXrmP } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/getXrmP"
+import { getXrmP, getURLParameter } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
 import { AddressEditorProps, EditorListProps, EditorDetailProps, } from "./AddressEditor.types"
 import { AddressEditor } from "./AddressEditor"
 import { API_POSTFIX, DEBUG } from "BuildSettings"
@@ -184,12 +184,24 @@ export async function getEditorEntityMetadata(metadata: Metadata): Promise<Edito
     })
 }
 
+const NAME = "AddressEditorRunner"
+
 /**
  * Runner which allows some but not all possible, customizations of the basic editing display.
  */
 export function run(props: AddressEditorRunProps) {
-    if (DEBUG) console.log("Calling AddressEditorRunner.run")
+    if (DEBUG) console.log(`Calling ${NAME}.run`)
     getXrmP().then(xrm => {
+
+        const data = getURLParameter("data", document.location.search)
+        let params = {} as { addressEditorRunProps?: Partial<AddressEditorRunProps> }
+        try {
+            params = JSON.parse(data || "{}")
+        } catch(e) {
+            console.log(`${NAME}: Error parsing data object from url. Continuing.`, e)
+        }
+        props = R.mergeDeepRight(props, params.addressEditorRunProps || {}) as AddressEditorRunProps 
+
         const client = props.client || mkClient(xrm, API_POSTFIX)
         const repo: CustomerAddressDAO = props.addressRepo || new CustomerAddressDAOImpl(client)
         const className = mergeStyles(props.className, defaultStyles, props.styles)

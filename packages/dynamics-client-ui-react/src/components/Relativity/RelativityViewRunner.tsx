@@ -5,29 +5,26 @@
  * data sources.
  */
 import * as React from "react"
-import { render } from "react-dom"
+import * as ReactDOM from "react-dom"
 import { Provider, connect } from "react-redux"
 import { createStore, applyMiddleware, compose } from "redux"
-const cx = require("classnames")
 import { Fabric } from "office-ui-fabric-react/lib"
-import {
-    getXrmP, getEntityInfo, getURLParameter,
-} from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
+import { getXrmP, getURLParameter } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
 import * as EF from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
-//const fstyles = require("@aappddeevv/dynamics-client-ui/lib/Dynamics/flexutilities.css")
 import { RelativityComponent } from "./RelativityComponent"
 import * as Data from "./Data"
 import "@aappddeevv/dynamics-client-ui/lib/fabric/ensureIcons"
 import { Client, mkClient } from "@aappddeevv/dynamics-client-ui"
-import { API_POSTFIX } from "BuildSettings"
+import { API_POSTFIX, DEBUG } from "BuildSettings"
 import { Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data"
 import {
-    DataSourceContext, BaseDataSource,
+    DataSource, DataSourceContext, BaseDataSource,
     makeNodesEdgesFromList, mkDefaultDataSources,
 } from "./datasources"
-import { EmptyNodesAndEdges, NodesAndEdges } from "./Data"
+import { EmptyNodesAndEdges, NodesAndEdges, RelativityDAO } from "./Data"
 import { IStyle, mergeStyles } from "office-ui-fabric-react/lib/Styling"
 import { RelativityComponentProps } from "./RelativityComponent.types"
+import * as R from "ramda"
 
 const middleware = []
 const store = createStore((state, action) => state, applyMiddleware(...middleware))
@@ -45,70 +42,82 @@ export const defaultViewStyle: IStyle = {
 }
 
 /** Interfaces to a run() method to start up our views. */
-export interface RelativityRunProps extends Record<string, any> {
-    target: HTMLElement | null
-    eid?: string
-    uid?: string
-    ename?: string
-    tcode?: string
+export interface RelativityViewRunProps extends Record<string, any> {
+    target?: HTMLElement | null
 
-    /** Of root HTML element. */
+    /** Of root div element. */
     className?: string | null
-    /** Of root HTML element. See [[defaultViewStyle]]. */
+    /** Of root div element. See [[defaultViewStyle]]. */
     style?: IStyle
 
+    /** 
+    * Props for the toplevel Relativity component. You could also override
+    * dao and dataSource here vs in the run props.
+    */
     relavitityComponentProps?: Partial<RelativityComponentProps>
+
+    /** Provide your own Client. */
+    client?: Client
+    
+    /** Provide your own Metadat. */
+    metadata?: Metadata
+
+    /** Provide your own DAO. */
+    dao?: RelativityDAO
+
+    /** Provide your own dataSource within an effect. */
+    makeDataSource?: (ctx: DataSourceContext) => Promise<DataSource>
 }
 
-export function run(props: RelativityRunProps) {
-    const {
-        target, eid, uid, ename, tcode,
-        className, style, relativityComponentProps,
-    } = props
+const NAME = "RelativityViewRunner"
 
+export function run(props: RelativityViewRunProps) {
+    if (DEBUG) console.log(`Calling ${NAME}.run`)
     getXrmP().then(xrm => {
-        let root: RelativityComponent | null = null
-
-        const { userId = null, entityId = null, entityName = null, entityTypeCode = null } =
-            {
-                entityId: eid, userId: uid, entityName: ename, entityTypeCode: tcode,
-                ...getEntityInfo(xrm),
-            }
-
+        
         const data = getURLParameter("data", document.location.search)
-        const params = JSON.parse(data || "{}") || {}
+        let params = {} as  { relativityViewRunProps?: Partial<RelativityViewRunProps>}
+        try {
+            params = JSON.parse(data || "{}")
+        } catch(e) {
+            console.log(`${NAME}: Error parsing data object from url. Continuing.`, e)
+        }
 
-        // process config object as well...
-        const roleCategories = props.roleCategories || Data.defaultRoleCategories
+        props = R.mergeDeepRight(props, params.relativityViewRunProps || {}) as RelativityViewRunProps
+
+        const roleCategories = Data.defaultRoleCategories
         const client = props.client || mkClient(xrm, API_POSTFIX)
-        const metadata = new Metadata(client)
-        // @ts-ignore
-        const context = {
+        const metadata = props.metadata || new Metadata(client)
+        const rdao = props.dao || new Data.RelativityDAOImpl(client, { metadata })
+        const context: DataSourceContext = {
             client,
             metadata,
-            // @ts-ignore
-            rdao: new Data.RelativityDAOImpl(client, { metadata }),
+            rdao: rdao
         }
-        /** Override the data sources to add your own but include these in your overall list. */
-        const dataSource = mkDefaultDataSources(context)
+        const dataSource = props.makeDataSource ? 
+            props.makeDataSource(context) : 
+             Promise.resolve(mkDefaultDataSources(context))
 
-        const _className = mergeStyles(defaultViewStyle, className, style)
+        const _className = mergeStyles(defaultViewStyle, props.className, props.style)
 
-        render(
+        const renderit = (target: HTMLElement, dataSource: DataSource) => 
+        ReactDOM.render(
             <Fabric className={_className}>
                 <Provider store={store}>
                     <EF.EntityForm xrm={xrm}>
                         <RelativityComponent
                             dao={context.rdao}
                             roleCategories={roleCategories}
-                            style={props.style}
                             dataSource={dataSource}
-                            ref={c => root = c}
-                            {...relativityComponentProps}
+                            {...props.relativityComponentProps}
                         />
                     </EF.EntityForm>
                 </Provider>
             </Fabric>,
             target)
+
+        dataSource.then(ds => {
+            if(props.target) renderit(props.target, ds)
+        })
     })
 }
