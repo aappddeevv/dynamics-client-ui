@@ -48,6 +48,32 @@ object Attribute {
   val c = statelessComponent("Attribute")
   import c.ops._
 
+  /**
+   * DO NOT USE! Create a "spacer", empty label and value.  Does not work.
+   */
+  def spacer(className: js.UndefOr[String] = js.undefined) = c.copy(new methods {
+    val render = self => {
+      val s = getStyles(js.undefined)
+      val cn = getClassNames(className, s)
+      val context = new RendererContext[Unit] {
+        val value = None
+        val className = Some(css(cn.control, cn.edit))
+        def started(): Unit = ()
+        def cancelled(): Unit = ()
+        def changed(maybeValue: Option[Unit]): Unit = ()
+      }
+      div(new DivProps {
+        className = css(cn.root)
+      })(
+        Status(),
+        AttributeLabel(new AttributeLabelProps{
+          className = cn.label
+        })(""),
+        Renderers.makeBlank().edit(context)
+      )}
+  })
+
+  /** Create an Attribute component instantce. */
   def apply[T](
     attribute: AttributeMetadata,
     _value: Option[T],
@@ -60,7 +86,6 @@ object Attribute {
       val render = self => {
         val s = getStyles(styles)
         val cn = getClassNames(className, s)
-
         val context = new RendererContext[T] {
           val value = _value
           val className = Some(css(cn.control, cn.edit))

@@ -59,7 +59,8 @@ export const ResultOps = {
 
 /**
  * A type often used when retrieving results that then get
- * indexed by name. You'll probably wrap non-null results
+ * indexed by name (e.g. normalized or pivoted).
+ * You'll probably wrap non-null results
  * in a Maybe so you have `Maybe<NamedArrayTuple>` which
  * you then filter and map (e.g. `collect` or `reduce`).
  */

@@ -163,7 +163,7 @@ export function itemToOfficeMenuModel(item) {
 }
 
 /**
- * Renders a list of controlled `Checkbox`s usable in a fabric menu.
+ * Renders a list of controlled `Checkbox`s usable in a fabric command bar menu.
  * @param item.items {value,label} or {key,text} pairs.
  * @param item.selected Array of value/key initial selections.
  * @param item.onCheckboxChange Passed to individual Checkbox's when they change.

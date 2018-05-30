@@ -5,7 +5,7 @@ import {
     ActionChannelEffect,
 } from "redux-saga/effects"
 import { Action, AnyAction, ActionCreator } from "redux"
-import { ThunkAction as ThunkActionX } from "redux-thunk"
+//import { ThunkAction as ThunkActionX } from "redux-thunk"
 
 export {
     ActionCreator as ActionCreator,
@@ -31,7 +31,7 @@ export interface MultiActionCreator<T extends Action = Action> {
 }
 
 /** For react-thunk. */
-export type ThunkAction = ThunkActionX<any, any, any>
+//export type ThunkAction = ThunkActionX<any, any, any>
 /* export  ThunkAction {
  *     (...args: any[]): (dispatch: any, getState: any) => void
  * }

@@ -2,8 +2,8 @@ import * as ReactDOM from "react-dom"
 import * as React from "react"
 import { Fabric } from "office-ui-fabric-react/lib/Fabric"
 import { IStyle, mergeStyles } from "office-ui-fabric-react/lib/Styling"
-import { Client, mkClient, Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
-import {  Metadata, Attribute, EnumAttributeTypes } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
+import { Client, mkClient, Id, cleanId } from "@aappddeevv/dynamics-client-ui/lib/Data"
+import { Metadata, Attribute, EnumAttributeTypes } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
 import { EntityForm } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/EntityForm"
 import { getXrmP, getURLParameter } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
 import { AddressEditorProps, EditorListProps, EditorDetailProps, } from "./AddressEditor.types"
@@ -11,7 +11,7 @@ import { AddressEditor } from "./AddressEditor"
 import { API_POSTFIX, DEBUG } from "BuildSettings"
 import { CustomerAddressDAOImpl, CustomerAddressDAO } from '../../CustomerAddress'
 import { CustomerAddress } from "../CustomerAddress/DataModel"
-import { Security } from "../../utilities/Security"
+import { Security, AccessRights } from "@aappddeevv/dynamics-client-ui/lib/Data/Security"
 import { XRM } from "@aappddeevv/dynamics-client-ui"
 import {
     addEditorState, DataController, EditorEntityMetadata, PerformSearchResult,
@@ -120,10 +120,10 @@ export const directCopyProps = [
 ]
 
 /** Check address number. If 1 or 2, you cannot delete it. */
-export const defaultCanDelete = async (item: CustomerAddress): Promise<string|void> => {
-        const n = item.addressnumber
-        if(n && (n === 1 || n === 2)) return `Address '${item.name}' is a reserved address.`        
-        return Promise.resolve()
+export const defaultCanDelete = async (item: CustomerAddress): Promise<string | void> => {
+    const n = item.addressnumber
+    if (n && (n === 1 || n === 2)) return `Address '${item.name}' is a reserved address.`
+    return Promise.resolve()
 }
 
 /**
@@ -169,19 +169,19 @@ export function makeController(repo: CustomerAddressDAO, directCopyProps: Array<
  */
 export async function getEditorEntityMetadata(metadata: Metadata): Promise<EditorEntityMetadata> {
     return makeEntityMetadata("customeraddress", metadata)
-    .then (m => {
-        // setup what we need in an array and Promise.all them....do that soon :-)
-        const addressTypeP = metadata.lookupEnumAttribute("customeraddress", "addresstypecode", 
-        EnumAttributeTypes.PickList)
-        return addressTypeP
-        .then(atp => {
-            return {
-                ...m,
-                attributesById: { ...m.attributesById, [atp!.MetadataId]: atp  as Attribute},
-                attributesByName: { ...m.attributesByName, [atp!.LogicalName]: atp as Attribute },             
-            }
+        .then(m => {
+            // setup what we need in an array and Promise.all them....do that soon :-)
+            const addressTypeP = metadata.lookupEnumAttribute("customeraddress", "addresstypecode",
+                EnumAttributeTypes.PickList)
+            return addressTypeP
+                .then(atp => {
+                    return {
+                        ...m,
+                        attributesById: { ...m.attributesById, [atp!.MetadataId]: atp as Attribute },
+                        attributesByName: { ...m.attributesByName, [atp!.LogicalName]: atp as Attribute },
+                    }
+                })
         })
-    })
 }
 
 const NAME = "AddressEditorRunner"
@@ -197,26 +197,27 @@ export function run(props: AddressEditorRunProps) {
         let params = {} as { addressEditorRunProps?: Partial<AddressEditorRunProps> }
         try {
             params = JSON.parse(data || "{}")
-        } catch(e) {
+        } catch (e) {
             console.log(`${NAME}: Error parsing data object from url. Continuing.`, e)
         }
-        props = R.mergeDeepRight(props, params.addressEditorRunProps || {}) as AddressEditorRunProps 
+        props = R.mergeDeepRight(props, params.addressEditorRunProps || {}) as AddressEditorRunProps
 
         const client = props.client || mkClient(xrm, API_POSTFIX)
         const repo: CustomerAddressDAO = props.addressRepo || new CustomerAddressDAOImpl(client)
         const className = mergeStyles(props.className, defaultStyles, props.styles)
         const sec = new Security(client)
         const metadatap = getEditorEntityMetadata(repo.metadata)
-    
-        const x = sec.userPrinicpalAccessForRecord(xrm.Utility.getGlobalContext().getUserId(),
-            "contact", xrm.Page.data.entity.getId())
-        x.then(s => console.log("x", s))
+
+        // todo Remove dependency on Page and rely on form context perhaps, also rely on metadata
+        const entityName = xrm.Page.data.entity.getEntityName()
+        const access = sec.userPrinicpalAccessForRecord(xrm.Utility.getGlobalContext().getUserId(),
+            entityName, cleanId(xrm.Page.data.entity.getId()))
 
         const controller: DataController<CustomerAddress> =
             props.controller ||
             (props.makeController ? props.makeController(repo) : makeController(repo, directCopyProps))
 
-        const renderit = (target: HTMLElement, metadata: EditorEntityMetadata) => {
+        const renderit = (target: HTMLElement, metadata: EditorEntityMetadata, access: AccessRights) => {
             const Ed = addEditorState<AddressEditorProps>(AddressEditor)
             const defaultRenderEditor = (props: AddressEditorProps) => <Ed {...props} />
             const specification: EditorSpecification = {
@@ -228,6 +229,9 @@ export function run(props: AddressEditorRunProps) {
                 specification,
                 controller,
                 addressRepo: repo,
+                canDeleteOverride: access.DeleteAccess,
+                canCreateOverride: access.CreateAccess,
+                canEditOverride: access.WriteAccess,
                 ...props.addressEditorProps,
             }
             return ReactDOM.render(
@@ -245,13 +249,13 @@ export function run(props: AddressEditorRunProps) {
                 target)
         }
 
-        Promise.all([metadatap])
-        .then(asyncs => {
-            const m = asyncs[0]
-            if (props.target) renderit(props.target, m)
-        })
-        .catch(e => {
-            console.log("AddressEditor: Unable to retrieve metadata", e)
-        })        
+        Promise.all([metadatap, access])
+            .then(asyncs => {
+                const m = asyncs[0]
+                if (props.target) renderit(props.target, m, asyncs[1])
+            })
+            .catch(e => {
+                console.log("AddressEditor: Unable to retrieve metadata", e)
+            })
     })
 }

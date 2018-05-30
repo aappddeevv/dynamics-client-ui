@@ -371,7 +371,7 @@ export function* adjustStateFilter() {
 export function* adjustOwnerOnlyFilter() {
     const filterName = changeYoursOnlyFilter.ACTION
     yield call(mkSubactionSaga(filterName, function* (action, state) {
-        if (state.yoursOnly) {
+        if (state.filter.yoursOnly) {
             yield put(DataActions.addProcessors([{
                 name: filterName,
                 description: "filter on owner = logged in user.",

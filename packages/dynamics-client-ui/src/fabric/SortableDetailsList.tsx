@@ -2,8 +2,11 @@
  * Sortable details list using helpers.
  */
 import * as React from "react"
-const cx = require("classnames")
 import { Fabric } from "office-ui-fabric-react/lib/Fabric"
+import {
+    css, IRenderFunction, memoizeFunction,
+} from "office-ui-fabric-react/lib/Utilities"
+import { mergeStyles, mergeStyleSets, IStyle, concatStyleSets } from "office-ui-fabric-react/lib/Styling"
 import {
     CheckboxVisibility,
     ColumnActionsMode,
@@ -19,13 +22,13 @@ import {
     SelectionMode,
     IDetailsHeaderProps,
 } from "office-ui-fabric-react/lib/DetailsList"
-import { IRenderFunction } from "office-ui-fabric-react/lib/Utilities"
 import { ScrollablePane } from "office-ui-fabric-react/lib/ScrollablePane"
-import { Sticky } from "office-ui-fabric-react/lib/Sticky"
+import { Sticky, StickyPositionType } from "office-ui-fabric-react/lib/Sticky"
 // remove when #4099 is pushed to a release
 //import { Sticky } from "./StickyX"
 import * as Helpers from "./DetailsListHelpers"
 import { setStatePromise } from "../react/component"
+import { getColumnStyles } from '../Components/Helpers';
 
 export {
     SortingState, ColumnSortInfo, SortOrderTransitions, defaultOrder,
@@ -37,6 +40,7 @@ export {
  * @deprecated Use`SortableDetailsListProps`.
  */
 export interface Props<T> {
+    /** className on root element. */
     className?: string
     /** Selection. This is *not* updated via setItems upon sort. See onSort. */
     selection?: ISelection
@@ -55,6 +59,9 @@ export interface Props<T> {
      * object.
      */
     onSort?: (items: Array<T>) => void
+
+    /** styles for different parts */
+    styles?: SortableDetailsListStyles
 }
 
 /** The real interface. */
@@ -87,15 +94,11 @@ export interface State<T> {
  * `data.sortAttribute` should indicate the attribute to sort on if its different than
  * fieldname.
  *
- * The DetailsList component is wrapped in ScrollablePane and the header is made sticky.
- * The class name `sortableDeailsList` that helps you constrain the size of the list and is
- * marked with a `data-is-scrollable` attribute per github.
- *
-* This component should be wrapped in a div with the `data-is-scrollable` set to true and
-* ensure that the scrollable pane or the outer container is sized and its position is
-* set to "relative" so that the ScollablePane has a "positioned" parent. Ensuring that
-* the height is set is key to forcing vertical scrolling.
- *
+ * A ScrollablePane is wrapped in an outer div with className ttg-SortableDetailsList.
+ * Set the height explictly (e.g. 100%) or ensure its parent has its heigh set e.g. flexbox. The
+ * outer div has position "relative" to ensure it forces a scrolle. There is a bug
+ * in sticky headers. See the link below. The headers will scroll with the data until
+ * this is fixed.
  *
  * @see https://github.com/OfficeDev/office-ui-fabric-react/issues/3267
  */
@@ -164,38 +167,86 @@ export class SortableDetailsList<T> extends React.Component<Props<T>, State<T>> 
     }
 
     public render() {
+        const { className, styles } = this.props
+        const cn = getClassNames(getStyles(styles), className)
+
         const props = this.props
         const selection = props.selection ?
             { selection: props.selection } :
             {}
 
         return (
-            <ScrollablePane
-                className={cx("sortableDetailsList", "sortedDetailsList", props.className)}
-                data-ctag="SortableDetailsList"
-            >
-                <DetailsList
-                    onShouldVirtualize={() => false} // hack due to render error #4204
-                    //onRenderDetailsHeader={
-                    //    // tslint:disable-next-line:jsx-no-lambda
-                    //    (detailsHeaderProps: IDetailsHeaderProps, defaultRender: IRenderFunction<IDetailsHeaderProps>) =>
-                    //        <Sticky>{defaultRender(detailsHeaderProps)}</Sticky>
-                    //}
-                    columns={this.state.columns}
-                    items={this.state.sorted}
-                    compact
-                    selectionPreservedOnEmptyClick
-                    selectionMode={props.allowSelection ? SelectionMode.multiple : SelectionMode.none}
-                    layoutMode={LayoutMode.justified}
-                    constrainMode={ConstrainMode.horizontalConstrained}
-                    checkboxVisibility={props.allowSelection ? CheckboxVisibility.onHover :
-                        CheckboxVisibility.hidden}
-                    {...props.detailsListProps}
-                    {...selection}
-                />
-            </ScrollablePane >
+            <div className={cn.root}>
+                <ScrollablePane
+                    className={cn.scrollablePane}
+                >
+                    <DetailsList
+                        // we can leave this off now
+                        //onShouldVirtualize={() => false} // hack due to render error #4204
+                        // onRenderDetailsHeader={
+                        //     // tslint:disable-next-line:jsx-no-lambda
+                        //     (props: IDetailsHeaderProps, renderer: IRenderFunction<IDetailsHeaderProps>) =>
+                        //         <Sticky stickyPosition={StickyPositionType.Header}>{renderer(props)}</Sticky>
+                        // }
+                        columns={this.state.columns}
+                        items={this.state.sorted}
+                        compact
+                        selectionPreservedOnEmptyClick
+                        selectionMode={props.allowSelection ? SelectionMode.multiple : SelectionMode.none}
+                        layoutMode={LayoutMode.justified}
+                        constrainMode={ConstrainMode.horizontalConstrained}
+                        checkboxVisibility={props.allowSelection ? CheckboxVisibility.onHover :
+                            CheckboxVisibility.hidden}
+                        {...props.detailsListProps}
+                        {...selection}
+                        className={css(cn.list, props.detailsListProps ? props.detailsListProps.className : null)}
+                    />
+                </ScrollablePane >
+            </div>
         )
     }
 }
 
 export default SortableDetailsList
+
+export interface SortableDetailsListStyles {
+    root?: IStyle
+    scrollablePane?: IStyle
+    list?: IStyle
+}
+
+export const getStyles = memoizeFunction((customStyles?: SortableDetailsListStyles): SortableDetailsListStyles => {
+    const styles: SortableDetailsListStyles = {
+        root: {
+            position: "relative",
+            // always ensures something is rendered.
+            minHeight: 1,
+        },
+        scrollablePane: {
+        },
+        list: {
+        }
+    }
+    return concatStyleSets(styles, customStyles)
+})
+
+export interface SortableDetailsListClassNames {
+    root: string
+    scrollablePane: string
+    list: string
+}
+
+export const getClassNames = memoizeFunction((styles: SortableDetailsListStyles, className?: string | null):
+    SortableDetailsListClassNames => {
+    return mergeStyleSets({
+        root: [
+            "ttg-SortableDetailsList",
+            "sortableDetailsList",
+            "sortedDetailsList",
+            styles.root,
+            className,
+        ],
+        scrollablePane: [styles.scrollablePane],
+        list: [styles.list],
+    })
+})

@@ -10,6 +10,8 @@
     flex-direction: column;
 }
 
+.flexFull { flex-basis: 100%; }
+
 .flexHalf {
     flex-basis: 50%;
 }

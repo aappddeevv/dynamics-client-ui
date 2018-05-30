@@ -19,7 +19,7 @@ lazy val macroSettings = Seq (
 )
 
 lazy val buildSettings = Seq(
-  organization := "ttg",
+  organization := "ttg-dynamics-client",
   licenses ++= Seq(("MIT", url("http://opensource.org/licenses/MIT"))),
   scalaVersion := "2.12.4",
   resolvers += Resolver.sonatypeRepo("releases"),
@@ -65,10 +65,10 @@ lazy val commonSettings = Seq(
   autoAPIMappings := true,
   // need scalajs-react libraries
   libraryDependencies ++= Seq(
-    //"ttg" %%% "scalajs-react-core" % "0.1.0-M3",
-    //"ttg" %%% "scalajs-react-react-dom" %  "0.1.0-M3",
-    //"ttg" %%% "scalajs-react-vdom" %  "0.1.0-M3",
-    //"ttg" %%% "scalajs-react-fabric" %  "0.1.0-M3"
+    //"ttg" %%% "scalajs-react-core" % "0.1.0-M4",
+    //"ttg" %%% "scalajs-react-react-dom" %  "0.1.0-M4",
+    //"ttg" %%% "scalajs-react-vdom" %  "0.1.0-M4",
+    //"ttg" %%% "scalajs-react-fabric" %  "0.1.0-M4"
   )
 )
 
@@ -77,7 +77,7 @@ lazy val scalajs_react_fabric =
   ProjectRef(file("scalajs-react"), "scalajs-react-fabric")
 lazy val scalajs_react_core =
   ProjectRef(file("scalajs-react"), "scalajs-react-core")
-lazy val scalajs_react_vdom=
+lazy val scalajs_react_vdom =
   ProjectRef(file("scalajs-react"), "scalajs-react-vdom")
 
 lazy val libsettings = buildSettings ++ commonSettings
@@ -85,16 +85,26 @@ lazy val libsettings = buildSettings ++ commonSettings
 lazy val root = project.in(file("."))
   .settings(libsettings)
   .settings(noPublishSettings)
-  .settings(name := "dynamics-client-ui-react")
+  .settings(name := "ui-react")
   .aggregate(addresseditor)
   .enablePlugins(ScalaJSPlugin, AutomateHeaderPlugin)
   .disablePlugins(BintrayPlugin)
 
-lazy val addresseditor = project.in(file("./scala/addresseditor"))
-  .settings(name := "addresseditor")
+lazy val common = project.in(file("./scala/common"))
+  .settings(name := "ui-react-common")
   .settings(libsettings)
   .settings(publishSettings)
   .dependsOn(scalajs_react_fabric, scalajs_react_core, scalajs_react_vdom) // for interactive dev
+  .enablePlugins(ScalaJSPlugin, AutomateHeaderPlugin)
+  .settings(
+    description := "Address editor.",
+  )
+
+lazy val addresseditor = project.in(file("./scala/addresseditor"))
+  .settings(name := "ui-react-addresseditor")
+  .settings(libsettings)
+  .settings(publishSettings)
+  .dependsOn(scalajs_react_fabric, scalajs_react_core, scalajs_react_vdom, common) // for interactive dev
   .enablePlugins(ScalaJSPlugin, AutomateHeaderPlugin)
   .settings(
     description := "Address editor.",

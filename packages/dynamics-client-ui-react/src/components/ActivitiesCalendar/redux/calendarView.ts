@@ -3,7 +3,7 @@ import { Action, ActionCreator } from "redux"
 import {
     Actions as VActions, DataAction, ViewAction
 } from "../../ActivitiesReader/redux"
-import { createMultiSelect, mkChange, ThunkAction } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/actionutils"
+import { createMultiSelect, mkChange/*, ThunkAction*/ } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/actionutils"
 import * as moment from "moment"
 const update = require("immutability-helper")
 import { XRM } from "@aappddeevv/dynamics-client-ui"

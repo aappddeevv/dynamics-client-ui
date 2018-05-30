@@ -1,9 +1,8 @@
 import * as React from "react"
-import cx = require("classnames")
 import { DEBUG } from "BuildSettings"
 
 /**
- * Render a flex (row) div.
+ * Render a flex (row) div. This is the default master detail renderer for the main view.
  */
 export const ActivitiesBody: React.SFC<React.HTMLAttributes<HTMLDivElement>> = (props) => {
     return (

@@ -42,18 +42,30 @@ export interface AddressEditorProps extends Partial<EntityFormChildProps>, Edito
     onRenderMaster?: IRenderFunction<EditorListProps>
     /** Render the entire detaila. */
     onRenderDetail?: IRenderFunction<EditorDetailProps>
+
+    /** Override default "can edit" logic in editor. This is treated as a constant. */
+    canEditOverride?: boolean
+
+    /** Override. See `canEditOverride`.*/
+    canCreateOverride?: boolean
+
+    /** Override. See `conEditOverride`. */
+    canDeleteOverride?: boolean
 }
 
 export interface AddressEditorStyles {
     root?: IStyle
+    header?: IStyle
     masterDetail?: IStyle
     master?: IStyle
     detail?: IStyle
-    tab?: IStyle
+    /** Common part of the editor display: master, detail. */
+    part?: IStyle
 }
 
 export interface AddressEditorClassNames {
     root: string
+    header: string
     masterDetail: string
     master: string
     detail: string

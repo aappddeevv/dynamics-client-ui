@@ -415,7 +415,7 @@ export class RelativityComponent extends React.Component<RelativityComponentProp
                         {
                             key: "refresh",
                             name: "Refresh",
-                            icon: "Refresh",
+                            iconProps: { iconName: "Refresh" },
                             onClick: this.refresh,
                         },
                     ]}

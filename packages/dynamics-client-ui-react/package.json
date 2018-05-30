@@ -118,7 +118,6 @@
     },
     "dependencies": {
         "ramda": "^0.25.0",
-        "@uifabric/icons": "^5.2.0",
         "babel-runtime": "^6.26.0",
         "classnames": "^2.2.5",
         "codemirror": "^5.31.0",
@@ -136,7 +135,7 @@
         "moment": "^2.19.2",
         "monet": "^0.8.10",
         "normalizr": "^3.2.4",
-        "office-ui-fabric-react": "^5.60.0",
+        "office-ui-fabric-react": "^5.112.0",
         "prop-types": "^15.6.0",
         "randomcolor": "^0.5.3",
         "rc-tree": "^1.11.1",

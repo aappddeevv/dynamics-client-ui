@@ -1,40 +1,12 @@
 import * as React from "react"
-import { compose, withState, withHandlers, ComponentEnhancer } from "recompose"
+import { compose, withState, withHandlers, ComponentEnhancer, withStateHandlers } from "recompose"
 import { Omit } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/interfaces"
 import { Id } from "@aappddeevv/dynamics-client-ui/lib/Data"
 import { EntityDefinition, Attribute, Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data/Metadata"
 import { Client, normalizeWith } from "@aappddeevv/dynamics-client-ui/lib/Data"
 import { pathOr } from "ramda"
-
-/** What the output of [addEditorState] will receive as input. */
-export interface EditorProps {
-    /** The editor is dirty. */
-    isDirty: boolean
-    /** 
-     * The editor is editing. This could mean something specific to each editor, 
-     * not just real-time editing status.
-     */
-    isEditing: boolean
-    setDirty: (v: boolean) => void
-    setEditing: (v: boolean) => void
-    resetDirty: () => void
-    resetEditing: () => void
-}
-
-/**
- * HOC to add isDirty and isEditing state management plus a few functions.
- * Input component goes from from `P extends EditorProps` =>  `P omit EditorProps`.
- */
-export function addEditorState<P extends EditorProps>(component: React.ComponentType<P>) {
-    return compose<P, Omit<P, EditorProps>>(
-        withState("isEditing", "setEditing", false),
-        withState("isDirty", "setDirty", false),
-        withHandlers({
-            resetDirty: ({ setDirty }) => () => setDirty(false),
-            resetEditing: ({ setEditing }) => () => setEditing(false)
-        })
-    )(component)
-}
+import { EditorProps } from "../../utilities/EditingState"
+export * from "../../utilities/EditingState"
 
 /** 
  * Data controller for an editor. Methods should reflect both data integrity
@@ -57,7 +29,7 @@ export interface DataController<T> {
      * The idea is that this is called separately from delete to help improve UI
      * effectiveness.
      */
-    canDelete?: (a: T) => Promise<string|void>
+    canDelete?: (a: T) => Promise<string | void>
 
     /** Can we deactivate an entity (soft delete)? */
     canDeactivate?: (a: T) => Promise<boolean>
@@ -132,16 +104,16 @@ export async function makeEntityMetadata(entityName: string, metadata: Metadata)
  * @param lookup Attribute lookup logical name. This is the "fk" typically found in the entity record.
  * @param result Attribute result logical name. This is the resulting value to display in the UI.
  */
-export async function makeValueMapper(client: Client, entitySetName: string, 
+export async function makeValueMapper(client: Client, entitySetName: string,
     lookup: string, result: string): Promise<(value: string) => string> {
     const qopts = {
-            Select: [lookup, result]
-        }
+        Select: [lookup, result]
+    }
     return client.GetList<any>(entitySetName, qopts)
-    .then(r => {
-        const mapped =  normalizeWith(lookup, r.List)
-        return (value: string) => pathOr(value, [value, result], mapped)    
-    })
+        .then(r => {
+            const mapped = normalizeWith(lookup, r.List)
+            return (value: string) => pathOr(value, [value, result], mapped)
+        })
 }
 
 export interface AttributeSpecification {

@@ -7,7 +7,7 @@ export * from "./client"
 export {
     QueryOptions, GetListResponse,
     Attribute, UpdateResponse, ExpandQueryOptions,
-    Option, Id, Config, CRMWebAPI,
+    Option, Id, Config, CRMWebAPI, ToString,
 } from "./CRMWebAPI"
 export * from "./interfaces"
 export * from "./Utils"

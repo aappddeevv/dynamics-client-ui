@@ -19,6 +19,8 @@ import {
 export function renderEntityFormLink(ename: string, id: string, value: React.ReactNode = "Click Here",
   xrm: XRM | null = getXrm(), entityLinkProps?: Partial<ELProps>): JSX.Element {
   if (!!xrm) {
+    // xrm.Page.context.getCurrentAppProperties().appId is buried in a promise which we cannot
+    // handle at this point.
     const tryappid = getURLParameter("appid", window.parent.parent.location.search)
     const url = catchNonFatal(() => makeOpenEntityFormURL({
       entityName: ename,

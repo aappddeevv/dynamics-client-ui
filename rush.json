@@ -1,7 +1,7 @@
 {
   "rushVersion": "4.3.0",
   "npmVersion": "5.7.1",
-  "nodeSupportedVersionRange": ">=8.9.0 <= 10.1.0",
+  "nodeSupportedVersionRange": ">=8.9.0 <= 10.5.0",
 
   "projects": [
     {

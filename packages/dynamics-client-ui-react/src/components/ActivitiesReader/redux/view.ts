@@ -12,7 +12,7 @@ import { createActivityArgsBuilder } from "../createNewActivityUtils"
 import { put, select, PutEffect, SelectEffect } from "redux-saga/effects"
 import { ActionCreatorsMap } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/actionutils"
 import { XRM } from "@aappddeevv/dynamics-client-ui"
-import { ActivityItem} from "../datasources/datamodel"
+import { ActivityItem } from "../datasources/datamodel"
 import { DataAction } from "./data"
 
 export const STATE_KEY = "view"
@@ -119,6 +119,7 @@ export const Actions: ActionCreatorsMap<ViewAction> = {
     setLoading,
     selectIds,
     setXrm,
+    openForm,
 }
 
 //

@@ -15,6 +15,8 @@ export function getPrecision(a: number): number {
 /**
  * Convert string to number with the given precision, if provided
  * Return 0 if the string does not represent a number or its null.
+ * This may not be right e.g. toString() will not print trailing
+ * zeroes!?!?
  */
 export function toNumber(s: string | null, precision?: number | null): number {
     if (!s) return 0

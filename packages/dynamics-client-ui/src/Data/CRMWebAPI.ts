@@ -7,6 +7,15 @@ export type Id = string
 export type URI = string
 import { fetch } from "./XMLHTTPRequest"
 
+/**
+ * Some argumenst to the client API put quotes around the
+ * value based on the value type e.g. if its a string or String.
+ * Using this function circumvents that logic. Treat this as
+ * a class e.g. `new ToString(unquotedstring)`.
+ * @param arg Any string you don't want quoted.
+ */
+export function ToString(arg: string) { this.toString = () => arg }
+
 export interface Request {
     /** POST, PUT, etc. */
     method: string
@@ -472,7 +481,7 @@ export class CRMWebAPI {
     protected cleanId = (id: string): string => id.replace(/[{}]/g, "")
 
 
-    public ExecuteFunction = async (functionName: string, parameters: any,
+    public ExecuteFunction = async (functionName: string, parameters: object,
         entityCollection: string | null = null,
         entityID: Id | null = null) => {
         var self = this;

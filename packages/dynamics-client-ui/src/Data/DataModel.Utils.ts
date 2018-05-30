@@ -29,6 +29,12 @@ export function enhanceAudit<T extends Model.Audit>(audit: T,
 /** Map a field name into another name. */
 export type FieldMapper = (fname: string) => string
 
+/**
+ * Map a variety of standard dynamics crm odata and odata standard attribute names
+ * into standardized names suitable for direct access via "object.standardized_name"
+ * which is typically the original attribute name with a suffix e.g. formatted values
+ * for attribute "myattribute" becomes "myattribute_fv".
+ */
 export const defaultMappers = {
     "OData.Community.Display.V1.FormattedValue": (fname: string) => `${fname}_fv`,
     "Microsoft.Dynamics.CRM.associatednavigationproperty": (fname: string) => `${fname}_anp`,
@@ -39,7 +45,8 @@ export const defaultMappers = {
  * Map an object's properties that match the dynamics ODadata extended
  * properties into standardized fieldnames.
  */
-export function mapODataArtifacts<T extends {}>(item: T, mappers = defaultMappers): T {
+export function mapODataArtifacts<T extends {}>(item: T,
+    mappers: Record<string, FieldMapper> = defaultMappers): T {
     const addme = {}
     //console.log("BEFORE", item)
     for (let [ikey, ivalue] of Object.entries(item)) {

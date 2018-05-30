@@ -13,19 +13,29 @@ import * as menus from "./Menus"
 const fstyles = require("@aappddeevv/dynamics-client-ui/lib/Dynamics/flexutilities.css")
 const styles = require("./ActivitiesHeader.css")
 const cstyles = require("@aappddeevv/dynamics-client-ui/lib/Dynamics/common.css")
+import { CommandBar, ICommandBarProps } from "office-ui-fabric-react/lib/CommandBar"
 
 export interface ActivitiesHeaderRowProps {
     className?: string
     onRefresh?: () => void
     menuItems?: Array<IContextualMenuItem> | ((props: any) => Array<IContextualMenuItem>)
-    hideSearch?: boolean
+    isSearchBoxVisible?: boolean
     hideRefresh?: boolean
     hideMenu?: boolean
     /** More buttons/messages and other things to add... */
-    children?: React.ReactNode | React.ReactNode[]
+    //children?: React.ReactNode | React.ReactNode[]
     isLoading?: boolean
     onSearchChange?: (t: string) => void
     menuTriggerProps?: Partial<MenuTriggerProps>
+    moreItems?: Array<IContextualMenuItem>
+    commandBarProps?: Partial<ICommandBarProps>
+}
+
+export const renderSpinner = (className?: string | null) => {
+    return (
+        <Spinner className={className ? className : ""} size={SpinnerSize.medium}
+        />
+    )
 }
 
 /**
@@ -36,31 +46,69 @@ export interface ActivitiesHeaderRowProps {
 export function ActivitiesHeaderRow(props: ActivitiesHeaderRowProps) {
     const {
         className, menuItems, onRefresh,
-        hideSearch, hideRefresh, hideMenu,
-        children, isLoading, menuTriggerProps,
+        isSearchBoxVisible, hideRefresh, hideMenu,
+        /*children, */isLoading, menuTriggerProps,
+        moreItems, commandBarProps,
         onSearchChange, ...rest
     } = props
 
+    const sbvisible = isSearchBoxVisible || true
+    console.log("BLAH", props)
     const mitems: Array<IContextualMenuItem> = R.isNil(menuItems) ?
         menus.DefaultMenuItems(rest) : (
             typeof menuItems === "function" ? menuItems(rest) : (menuItems || []))
+
+    const spinner = isLoading ?
+        [{
+            key: "loading",
+            //onRender: () => renderSpinner(/*styles.headerButton*/)
+            name: "Loading...",
+            title: "Loading data from CRM server"
+        }] : []
+    const menu = !isLoading ?
+        [{
+            key: "menu",
+            name: "Filters",
+            title: "Filters to control what is displayed.",
+            onRender: () =>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                    <MenuTrigger {...menuTriggerProps} menuItems={mitems} />
+                    <span>Filter</span>
+                </div>
+        }] : []
+    const refresh = !isLoading ?
+        [{
+            key: "refresh",
+            name: "Refresh",
+            title: "Force a refresh data from CRM server.",
+            disabled: isLoading,
+            iconProps: {
+                iconName: "Refresh"
+            },
+            onClick: onRefresh
+        }] : []
+
     return (
         <div
             key="defaultActivitiesHeaderRow"
             className={cx(fstyles.flexHorizontal, className)}
             data-ctag="ActivitiesHeaderRow"
         >
-            {isLoading ?
+            <CommandBar
+                className={fstyles.flexFull}
+                items={[
+                    ...spinner,
+                    ...menu,
+                    ...(moreItems ? moreItems : []),
+                    ...refresh,
+                ]}
+                {...commandBarProps}
+            />
+            {/* {isLoading ?
                 <Spinner className={styles.headerButton} size={SpinnerSize.medium} /> :
                 <MenuTrigger {...menuTriggerProps} menuItems={mitems} />
             }
             {children}
-            {hideSearch ? null :
-                <SearchBox
-                    onChange={onSearchChange}
-                    className={fstyles.flexExpandLeft}
-                />
-            }
             {hideRefresh || isLoading ? null :
                 <div style={{ paddingLeft: 5, paddingRight: 3 }}>
                     <IconButton
@@ -71,8 +119,43 @@ export function ActivitiesHeaderRow(props: ActivitiesHeaderRowProps) {
                         iconProps={{ iconName: "refresh" }}
                     />
                 </div>
+            } */}
+            {!sbvisible || isLoading ? null :
+                <SearchBox
+                    onChange={onSearchChange}
+                    className={fstyles.flexExpandLeft}
+                />
             }
         </div>
+
+        // <div
+        //     key="defaultActivitiesHeaderRow"
+        //     className={cx(fstyles.flexHorizontal, className)}
+        //     data-ctag="ActivitiesHeaderRow"
+        // >
+        //     {isLoading ?
+        //         <Spinner className={styles.headerButton} size={SpinnerSize.medium} /> :
+        //         <MenuTrigger {...menuTriggerProps} menuItems={mitems} />
+        //     }
+        //     {children}
+        //     {hideRefresh || isLoading ? null :
+        //         <div style={{ paddingLeft: 5, paddingRight: 3 }}>
+        //             <IconButton
+        //                 onClick={onRefresh}
+        //                 title="Refresh"
+        //                 aria-label="Refresh"
+        //                 aria-hidden
+        //                 iconProps={{ iconName: "refresh" }}
+        //             />
+        //         </div>
+        //     }
+        //     {!sbvisible || isLoading ? null :
+        //         <SearchBox
+        //             onChange={onSearchChange}
+        //             className={fstyles.flexExpandLeft}
+        //         />
+        //     }
+        // </div>
     )
 }
 

@@ -35,7 +35,9 @@ import { Notification } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Notifi
 export type T = CustomerAddressE
 
 export interface State {
-    /** Selected address out of the master list. */
+    /** Selected address out of the master list. This is derivable from
+     * the selection object but changes in selection should force redisplay.
+     */
     selected: Maybe<T>
     /** Clone of selected every time selected changes--editing scratchpad. */
     buffer: Maybe<T>
@@ -46,9 +48,7 @@ export interface State {
 }
 
 export function defaultDetailRender(props: EditorDetailProps) {
-    return (<AddressDetailX.Component
-        {...props}
-    />)
+    return (<AddressDetailX.Component {...props} />)
 }
 
 export function defaultMasterRender(props: EditorListProps) {
@@ -95,13 +95,6 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
         if (this.context.notifier)
             this.context.notifier.add(n)
     }
-
-    // protected canSelectItem = (item: any): boolean => {
-    //     const isBusy = this.props.isDirty || this.props.isEditing
-    //     if (isBusy && 
-    //         this.state.selected.map(a => a.customeraddressid === item.customeraddressid).orSome(false)) return false
-    //     return true
-    // }
 
     protected onSelectionChanged = (): void => {
         const item = firstOrElse<any, null>(this.selection.getSelection(), null)
@@ -176,9 +169,9 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                 }
                 else return Promise.resolve()
             })
-        if(this.props.controller.canDelete && this.state.selected.isSome()) {
+        if (this.props.controller.canDelete && this.state.selected.isSome()) {
             const deleteAllowed = await this.props.controller.canDelete(this.state.selected.some())
-            if(typeof deleteAllowed === "string") {
+            if (typeof deleteAllowed === "string") {
                 // not allowed!
                 this.message({
                     level: "ERROR",
@@ -187,7 +180,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                 })
                 return Promise.resolve()
             }
-        } 
+        }
         return runDelete()
     }
 
@@ -201,13 +194,13 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
 
     /** Reset editing flags from parent component--causes up to 2 renders. */
     protected resetEditingFlags = () => {
-        this.props.setDirty(false)
-        this.props.setEditing(false)
+        this.props.resetEditingState()
     }
 
-    /** Reset buffer to copy of selected or None. */
-    protected resetBuffer = () => {
-        this.setState({
+    /** Reset buffer to copy of selected or None, removes all edits, and resets `changed`. */
+    protected resetBuffer = async () => {
+        return setStatePromise(this, {
+            changed: [],
             buffer: this.state.selected.map(a => ({ ...a }))
         })
     }
@@ -241,15 +234,15 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                 .orElse(Maybe.pure<T>({ [id]: value })),
             changed: [id, ...this.state.changed]
         }, () => {
-            console.log("updated buffer is", this.state.buffer, this.state.changed)
+            console.log(`${NAME}.handleChange: updated buffer is`, this.state.buffer, this.state.changed)
         })
         if (!this.props.isDirty) this.props.setDirty(true)
     }
 
     protected discard = () => {
-        console.log(`${NAME}: discard changes`)
-        this.resetEditingFlags()
+        console.log(`${NAME}.discard: discarding changes`)
         this.resetBuffer()
+            .then(() => this.resetEditingFlags())
     }
 
     public componentDidMount() {
@@ -257,10 +250,11 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
 
     public componentWillReceiveProps(nextProps: AddressEditorProps, nextState: State) {
-        if (nextProps.entityId !== this.props.entityId)
-            this.getData(nextProps.entityId)
-        if(nextProps.isDirty || nextProps.isEditing) this.disableSelection()
-            else this.enableSelection()
+        const p = nextProps.entityId !== this.props.entityId ?
+            this.getData(nextProps.entityId) :
+            Promise.resolve()
+        if (nextProps.isDirty || nextProps.isEditing) this.disableSelection()
+        else this.enableSelection()
     }
 
     protected getData = async (entityId?: Id | null): Promise<void> => {
@@ -285,19 +279,44 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
     }
 
     public render() {
+
         this._styles = getStyles(this.props.styles)
         this._classNames = getClassNames(this._styles, this.props.className)
-        const hasSelection = this.selection.getSelectedCount() > 0
-        const isEditing = this.props.isEditing
+
+        const hasSelection = this.state.selected.isSome()
         const isDirty = this.props.isDirty || this.state.changed.length > 0
-        const canEdit = !isEditing && !isDirty
-        const canCreate = !!this.props.controller.create
+        // isEditing => editing any attribute or is dirty, not just editing this moment...
+        const isEditing = this.props.isEditing || isDirty
+
+        // used on each command independently of can* flags.
+        const disableNoMatterWhat = !this.props.entityId
+
+        const canSave = (isEditing || isDirty)
+            && !!this.props.canEditOverride
+
         const canDelete =
-            !!this.state.selected &&
-            !!this.props.controller.canDelete &&
-            !!this.props.controller.delete &&
-            !isDirty &&
-            !isEditing
+            (this.state.selected.isSome() &&
+                !!this.props.controller.canDelete &&
+                !!this.props.controller.delete &&
+                !isEditing)
+            && !!this.props.canDeleteOverride
+
+        const canNew = (!!this.props.controller.create && !isEditing)
+            && !!this.props.canCreateOverride
+
+        const canRefresh = !isEditing
+
+        const canDiscard = isEditing
+
+        if (DEBUG) console.log(`${NAME}.render: flags`,
+            "\nisDirty (props)", this.props.isDirty,
+            "\nisDirty (derived)", isDirty,
+            "\nisEditing", this.props.isEditing,
+            "\ncanEditOverride", this.props.canEditOverride,
+            "\ncanCreateOverride", this.props.canCreateOverride,
+            "\ncanDeleteOverride", this.props.canDeleteOverride,
+            "\ncanSave", canSave, "\ncanNew", canNew,
+            "\ncanRefresh", canRefresh, "\ncanDiscard", canDiscard)
 
         const detailProps = {
             specification: this.props.specification,
@@ -325,12 +344,13 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                 disabled={true}
             >
                 <CommandBar
+                    className={this._classNames.header}
                     items={[
                         {
                             key: "Save",
                             name: "Save",
                             icon: "Save",
-                            disabled: !(isEditing || isDirty),
+                            disabled: !canSave || disableNoMatterWhat,
                             onClick: () => { this.save() }
 
                         },
@@ -338,7 +358,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "new",
                             name: "New",
                             icon: "Add",
-                            disabled: canCreate && !canEdit,
+                            disabled: !canNew || disableNoMatterWhat,
                             onClick: () => this.add()
                         },
                         {
@@ -346,14 +366,14 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "delete",
                             name: "Delete",
                             icon: "Delete",
-                            disabled: !canDelete,
+                            disabled: !canDelete || disableNoMatterWhat,
                             onClick: () => this.delete()
 
                         },
                         {
                             key: "discard",
                             name: "Discard",
-                            disabled: !isDirty,
+                            disabled: !canDiscard || disableNoMatterWhat,
                             icon: "Undo",
                             onClick: () => this.discard(),
                         },
@@ -361,7 +381,7 @@ export class AddressEditor extends React.Component<AddressEditorProps, State> {
                             key: "refresh",
                             name: "Refresh",
                             icon: "Refresh",
-                            disabled: isEditing,
+                            disabled: !canRefresh || disableNoMatterWhat,
                             onClick: () => this.refresh(),
                         },
                     ]}

@@ -12,12 +12,12 @@ export const getStyles = memoizeFunction((
             display: "flex",
             flexDirection: "column",
         },
-        tab: {
-            height: `calc(100% - ${headers}px)`,
+        /** Assumes all parts are on the same row so all have command bar header. */
+        part: {
         },
         masterDetail: {
-            display: "flex", // row
-            //flexWrap: "wrap",            
+            height: `calc(100% - ${headers}px)`,
+            display: "flex",
         },
         master: {
             flexBasis: "50%",
@@ -28,6 +28,7 @@ export const getStyles = memoizeFunction((
                 // "& .ms-List-cell": {
                 //     borderBottom: "1px solid rgb(206,206,206)"
                 // }
+                "& .ttg-SortableDetailsList": { height: "100%" }
             }
         },
         detail: {

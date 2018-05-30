@@ -3,7 +3,7 @@
  * The module contains state that is module-wide and must be
  * initialized prior to use. See "onLoad" or "init".
  */
-import * as ValidateJS from "validate.js"
+//import * as ValidateJS from "validate.js"
 import { DEBUG } from "BuildSettings"
 
 /** Module wide form context. */
@@ -21,7 +21,7 @@ export function onLoad(ctx: Xrm.Events.EventContext): void {
 }
 
 /**
- * Alternatively from onLoad, call this to initialize the module with ha
+ * Alternatively from onLoad, call this to initialize the module with the
  * form context directly.
  */
 export function init(fctx: Xrm.FormContext): void {
@@ -111,7 +111,7 @@ export interface RegistrationOptions {
 function mkAttributeKey(attributeName: string) { return `${attributeName}-Error` }
 
 /**
- * Register callback but using an enhanced callback arg to make it easier
+ * Register callback on attribute value change  but using an enhanced callback arg to make it easier
  * to create simple logic for validaton and form changes.
  * @param attributeName Attribute name to monitor.
  * @param onChange On change handler.

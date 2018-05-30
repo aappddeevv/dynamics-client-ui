@@ -3,8 +3,10 @@
  * utilities for working with that data.
  */
 import * as moment from "moment"
+import { mapODataArtifacts } from "@aappddeevv/dynamics-client-ui/lib/Data/DataModel.Utils"
 
 export { Id } from "@aappddeevv/dynamics-client-ui"
+
 
 /** Default date format. */
 export const momentDateFormat = "MM/DD/YY h:mm a";
@@ -162,6 +164,7 @@ export const emptyActivityItem: ActivityItem = {
  */
 export function prepActivity(w: any, dateFormat?: string | null): ActivityItem {
     const x = {
+        ...mapODataArtifacts(w),
         context: {
             dataSource: w.dataSource,
         },

@@ -18,16 +18,24 @@ export const getClassNames = memoizeFunction((
                 className,
                 styles.root,
             ],
+            header: [
+                "ttg-AddressEditor-header",
+                styles.header,
+            ],
             masterDetail: [
-                "ttg-MasterDetail",
+                "ttg-AddressEditor-masterDetail",
                 styles.masterDetail,
             ],
             master: [
-                "ttg-AddressList",
+                "ttg-AddressEditor-part",
+                "ttg-AddressEditor-master",
+                styles.part,
                 styles.master,
             ],
             detail: [
-                "ttg-AddressDetail",
+                "ttg-AddressEditor-part",
+                "ttg-AddresEditor-detail",
+                styles.part,
                 styles.detail
             ],
         },

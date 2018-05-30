@@ -163,7 +163,7 @@ object Renderers {
   @JSExport
   val dataIsFocusable = jsobj("data-is-focusable" -> "true")
 
-  /** 
+  /**
    * Render a text attribute.
    * 
    * @todo Take into account MaxLength. 
@@ -194,7 +194,7 @@ object Renderers {
     val edit: ValueRenderer[String] = context => {
       //println(s"String control (${args.attribute.LogicalName}): value ${context.value}")
       val props =  merge[ITextFieldProps](
-        multilineProps, 
+        multilineProps,
         new ITextFieldProps {
           //defaultValue = context.value.getOrElse[String]("")
           value = context.value.getOrElse[String]("")
@@ -234,6 +234,7 @@ object Renderers {
     ValueControls(display, edit)
   }
 
+  @JSExport
   /** Make a memo control = multi-line string editor. */
   def makeMemo(args: MakeRendererArgs[MemoAttributeMetadata], nlines: Int = 5): ValueControls[String] = {
     makeString(args, nlines)
@@ -242,7 +243,7 @@ object Renderers {
   // /**
   //  * We use a textfield and a lookup button to the right and call the Xrm.openLookup() function
   //  * to open the lookup and handle the results.
-  //  * 
+  //  *
   //  * @todo make internal styles using `mergeStyles`.
   //  */
   // @JSExport
@@ -265,14 +266,14 @@ object Renderers {
   //       })(),
   //       IconButton(new IButtonProps {
   //         iconProps = new IIconProps { iconName = "Search" }
-  //         onClick = js.defined(_ => initiateSearch())          
+  //         onClick = js.defined(_ => initiateSearch())
   //       })()
   //     )
   //   }
   //   ValueControls(display, edit)
   // }
 
-  /** 
+  /**
    * Lookup control for attributes that are stored as strings in a dynamics
    * entity but whose value comes from a lookup on another, potentially large,
    * entity. `initiateSearch` can use any information available to it to perform
@@ -315,18 +316,18 @@ object Renderers {
             flex = "1 1 auto"
           }
         })(displayValue),
-        // initiate search
-        IconButton(new IButtonProps {
-          iconProps = new IIconProps { iconName = "Search" }
-          onClick = js.defined(_ => initiateSearch)
-        })(),
-        // clear button
-        IconButton(new IButtonProps {
-          iconProps = new IIconProps{ iconName = "Clear" }
-          onClick = js.defined{_ =>
-            context.started()
-            context.changed(None)
-          }})()
+          // initiate search
+          IconButton(new IButtonProps {
+            iconProps = new IIconProps { iconName = "Search" }
+            onClick = js.defined(_ => initiateSearch)
+          })(),
+          // clear button
+          IconButton(new IButtonProps {
+            iconProps = new IIconProps{ iconName = "Clear" }
+            onClick = js.defined{_ =>
+              context.started()
+              context.changed(None)
+            }})()
       )
     }
     ValueControls(display, edit)
@@ -358,7 +359,7 @@ object Renderers {
       //println(s"className ${context.className}, ${_defaultSelectedKey}, ${context.value}")
       div(merge[DivProps](
         new DivProps {
-        className = context.className.orUndefined
+          className = context.className.orUndefined
         },
         dataid,
         dataIsFocusable))(
@@ -376,6 +377,19 @@ object Renderers {
         })()
       )
     }
+    ValueControls(display, edit)
+  }
+
+  @JSExport
+  def makeBlank(): ValueControls[Unit] = {
+    val display: ValueRenderer[Unit] = context => div("blank rederer not implemented")
+
+    val edit: ValueRenderer[Unit] = context => {
+      div(new DivProps{
+        className = context.className.orUndefined,
+      })()
+    }
+
     ValueControls(display, edit)
   }
 

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Requireable } from "prop-types"
 import { Store } from "redux"
 import { connect } from "react-redux"
 import cx = require("classnames")
@@ -8,7 +9,9 @@ import { Actions } from "./redux"
 import * as selectors from "./redux/selectors"
 import * as menus from "./Menus"
 import { CrmTable } from "@aappddeevv/dynamics-client-ui/lib/Components/CrmTable"
-import { ActivitiesHeader, ActivitiesHeaderRow } from "./ActivitiesHeader"
+import {
+    ActivitiesHeader, ActivitiesHeaderRow,
+} from "./ActivitiesHeader"
 import { ActivityView, ActivityViewProps } from "./ActivityView"
 const styles = require("./styles.css")
 const fstyles = require("@aappddeevv/dynamics-client-ui/lib/Dynamics/flexutilities.css")
@@ -67,6 +70,14 @@ export const defaultColumns: Array<Partial<IColumn>> = [
         fieldName: "statuscodestr",
         name: "Status",
         maxWidth: 100,
+        isResizable: true,
+    },
+    {
+        key: "owner",
+        fieldName: "owner",
+        name: "Owner",
+        maxWidth: 135,
+        data: { isSortable: true },
         isResizable: true,
     },
     {
@@ -204,11 +215,14 @@ export interface OwnProps {
     // clean this up
     headerRows: any
 
-    onRender?: (header: JSX.Element, body: JSX.Element, footer: JSX.Element | null, props: any) => JSX.Element
+    onRender?: (header: JSX.Element, body: JSX.Element, footer: JSX.Element | null, props: object) => JSX.Element
     onRenderMasterDetail?: (master: JSX.Element, detail: JSX.Element) => JSX.Element
+
+    /** Columns, default is defaultColumns */
+    columns?: Array<IColumn>
 }
 
-type ActivitiesViewComponentProps = OwnProps & MSTP & MDTP
+export type ActivitiesViewComponentProps = OwnProps & MSTP & MDTP
 
 export interface State {
     selectedIndex: number | null
@@ -220,7 +234,7 @@ export interface State {
  * view requires a large amount of reference data that must be setup in the redux
  * prior to use.
  */
-class ActivitiesViewComponent extends React.Component<ActivitiesViewComponentProps, State> {
+export class ActivitiesViewComponent extends React.Component<ActivitiesViewComponentProps, State> {
 
     constructor(props) {
         super(props)
@@ -262,6 +276,11 @@ class ActivitiesViewComponent extends React.Component<ActivitiesViewComponentPro
             ...rest } = this.props
 
         data = data || []
+        // additionalHeaderControls = 
+        //     <React.Fragment>
+        //         <span>new x</span>
+        //         <span>new y</span>
+        //     </React.Fragment>
         if (!header) {
             let hRows: Array<JSX.Element> = [];
             if (R.is(Function, headerRows)) {
@@ -282,13 +301,19 @@ class ActivitiesViewComponent extends React.Component<ActivitiesViewComponentPro
                     </ActivitiesHeaderRow>,
                 ]
             }
-            header = <ActivitiesHeader className={fstyles.flexNone}>{hRows}</ActivitiesHeader>;
+            header =
+                <ActivitiesHeader
+                    className={fstyles.flexNone}
+                >
+                    {hRows}
+                </ActivitiesHeader>
+            //header = makeCommandBarHeader({})
         }
 
         const master = <SortableDetailsList
             items={data}
             defaultSortState={defaultSortState}
-            columns={defaultColumns}
+            columns={this.props.columns ? this.props.columns : defaultColumns}
             allowSelection={true}
             className={cx(fstyles.flexHalf, styles.master)}
             //onSort={R.curry(this.updateSelectedIndex)(this.props.selectedId, R.__)}
@@ -332,13 +357,22 @@ class ActivitiesViewComponent extends React.Component<ActivitiesViewComponentPro
         }
         return this.props.onRender ?
             this.props.onRender(header, body, footer, cprops) :
-            <div {...cprops}>
+            renderDefaultView(header, body, footer, cprops)
+    }
+}
+
+/** Default `onRender`. */
+export const renderDefaultView: (header: JSX.Element, body: JSX.Element,
+    footer: JSX.Element | null, props: object) => JSX.Element = (header, body, footer, props) => {
+        return (
+            <div {...props}>
                 {header}
                 {body}
                 {footer}
-            </div>
+            </div >
+        )
     }
-}
+
 
 export const ActivitiesViewComponentR = connect<MSTP, MDTP, OwnProps>(
     mapStateToProps,

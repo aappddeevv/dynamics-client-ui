@@ -123,7 +123,7 @@ object AddressDetail {
         className = mergeStyles(props.className, new IRawStyle {
           display = "flex"
           flexDirection = "column"
-          height = "calc(100% - 30px)"
+          //height = "calc(100% - 30px)"
         })
       })(
         FocusZone(new IFocusZoneProps {
