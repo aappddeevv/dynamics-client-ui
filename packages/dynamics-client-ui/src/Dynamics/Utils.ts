@@ -23,31 +23,44 @@ export function getURLParameter(name: string, search: string = document.location
  * baseURL can come from `Xrm.Utility.getGlobalContext().getClientUrl()`.
  * appid, if you are in a WebResource, is 2 levels up.
  */
-export interface OpenEntityFormProps {
-    entityName: string
-    entityId: string
-    formId: string
-    appId: string
+export interface MakeEntityFormURLProps {
+    /** If this already includes /main.aspx? then it is *not* added. Otherwise a ? is appended.*/
     baseURL: string
-    navbar: boolean
-    cmdbar: boolean
-    /** Not used. */
-    extraqs: any
+    /** Entity logical name. */
+    entityName: string
+    /** Entity id. */
+    entityId: string
+
+    /** Specific form to open, otherwise it opens the default form for the entity.  */
+    formId?: string | null
+    /**
+     * Pass in the appId or embed it in the baseURL along with /main.aspx?
+     * If "appid" is in the URL, this is *not* used.
+     */
+    appId?: string | null
+    /** True, add a navbar. */
+    navbar?: boolean
+    /** True, add a command bar. */
+    cmdbar?: boolean
+    /** Not used yet but should. */
+    extraqs?: any | null
 }
 
 /**
- * Try to construct a robust URL that opens to an entity form.
+ * Construct a robust URL that opens to an entity form.
  * @see https://msdn.microsoft.com/en-us/library/gg328483.aspx
  * @param props Props to grab values from.
  */
-export function makeOpenEntityFormURL(props: Partial<OpenEntityFormProps>): string {
-    const navbar = ((typeof props.navbar === "undefined") ? false : !!props.navbar) ?
-        `&${!!props.navbar}` : ""
-    const cmdbar = ((typeof props.cmdbar === "undefined") ? false : !!props.cmdbar) ?
-        `&${props.cmdbar}` : ""
-    const appId = (typeof props.appId === "undefined" || props.appId === "") ? "" : `&appid=${props.appId}`
+export function makeOpenEntityFormURL(props: MakeEntityFormURLProps): string {
+    const navbar = !!props.navbar ? `&${!!props.navbar}` : ""
+    const cmdbar = !!props.cmdbar ? `&${props.cmdbar}` : ""
+    const appId = props.appId && props.baseURL && !props.baseURL.includes("appid") ? `&appid=${props.appId}` : ""
+    const includesMain = props.baseURL && props.baseURL.includes("/main.aspx?")
+    const mainPart = includesMain ? "" : "/main.aspx?"
+    const newBaseURL = `${props.baseURL}${mainPart}`
+    const sep = newBaseURL.slice(-1) === "?" ? "" : "&"
 
-    return `${props.baseURL}/main.aspx?etn=${props.entityName}${appId}&pagetype=entityrecord&id=%7B${props.entityId}%7D${navbar}${cmdbar}`
+    return `${newBaseURL}${sep}etn=${props.entityName}${appId}&pagetype=entityrecord&id=%7B${props.entityId}%7D${navbar}${cmdbar}`
 }
 
 /** Generate a unique id with an optional prefix. */

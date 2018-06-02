@@ -84,6 +84,7 @@ export const setLoading = (isLoading: boolean) => ({ type: TypeKeys.SET_LOADING,
 export const selectIds = (ids: Array<string>) => ({ type: TypeKeys.SELECT_IDS, ids })
 export const setXrm = (xrm: XRM) => ({ type: TypeKeys.SET_XRM, xrm })
 
+/** Ids are cleaned before placing into state. */
 export interface InitProps {
     entityId?: string | null
     userId?: string | null

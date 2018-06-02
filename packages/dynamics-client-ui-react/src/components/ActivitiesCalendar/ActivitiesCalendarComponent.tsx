@@ -6,7 +6,7 @@ import BigCalendar from "react-big-calendar"
 import * as moment from "moment"
 import { CalendarViewActions as CalActions } from "./redux"
 import { Actions as VActions } from "../ActivitiesReader/redux"
-import ControlPanelR from "./ControlPanel"
+import { ControlPanelR, ControlPanelProps } from "./ControlPanel"
 import * as selectors from "../ActivitiesReader/redux/selectors"
 import * as Utils from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
 import * as colors from "@aappddeevv/dynamics-client-ui/lib/Dynamics/colors"
@@ -61,7 +61,7 @@ export class ActivitiesCalendarComponent extends
     public render() {
         // todo: Don't use this ...rest thing for splatting out all other props...vey unsafe...
         const { view, date, selected, allUsers,
-            className, styles, onNavigate, ...rest } = this.props
+            className, styles, onNavigate, controlPanelProps, ...rest } = this.props
         const selectedActivity = Utils.firstOrElse<ActivityItem, undefined>(selected, undefined)
 
         this._styles = getStyles(styles)
@@ -92,6 +92,7 @@ export class ActivitiesCalendarComponent extends
                 />
                 <ControlPanelR
                     {...rest}
+                    {...controlPanelProps}
                     activity={selectedActivity}
                     classNames={{
                         root: this._classNames.controlPanel,

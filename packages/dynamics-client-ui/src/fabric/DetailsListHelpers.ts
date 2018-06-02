@@ -103,7 +103,8 @@ export type SortFunctionFactory<T> = (info: Array<{ property: string, direction:
 /** Get the property name of the data accessor to access the data used for sorting from an IColumn. */
 function getSortAttribute(c: IColumn): string {
     if (c.data && c.data.sortAttribute) return c.data.sortAttribute
-    else return c.fieldName
+    else if(c.fieldName) { return c.fieldName }
+    else throw new Error(`No fieldname specified for column with key ${c.key}`)
 }
 
 /**

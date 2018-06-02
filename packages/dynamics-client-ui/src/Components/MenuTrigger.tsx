@@ -1,4 +1,5 @@
 import * as React from "react"
+const cx = require("classnames")
 import { IconButton } from "office-ui-fabric-react/lib/Button"
 import {
     ContextualMenu, IContextualMenuItem, DirectionalHint
@@ -30,15 +31,15 @@ export class MenuTrigger extends React.Component<MenuTriggerProps, State> {
     static defaultProps = {
         title: "Selections",
         iconName: "More",
-        directionalHint: DirectionalHint.bottomLeftEdge
+        directionalHint: DirectionalHint.bottomLeftEdge,
     }
 
     render() {
         return (
-            <div>
+            <div className={cx("ttg-MenuTrigger")}>
                 <IconButton
                     onClick={this.onClick}
-                    className="contextualMenuTrigger"
+                    className={cx("ttg-MenuTrigger-icon", "contextualMenuTrigger")}
                     title={this.props.title}
                     aria-label={this.props.title}
                     aria-hidden

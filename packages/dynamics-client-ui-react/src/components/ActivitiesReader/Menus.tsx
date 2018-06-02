@@ -16,8 +16,11 @@ import { FilterAction } from "./redux/filter"
 
 export { DataAction, FilterAction }
 
-/** onNew called with (value, option, evt)  from options. */
-export function NewActivityMenu(options, onNew, disabled = false) {
+/** 
+ * onNew called with (value, option, evt)  from options. Option's value should be the 
+ * logical name of the activity to create.
+ */
+export function NewActivityMenu(options, onNew, disabled = false): IContextualMenuItem {
     const curriedOnNew = (value, opt) => !R.isNil(onNew) ? (e) => onNew(value, opt, e) : null
     const items = options.map(o =>
         ({
@@ -151,12 +154,12 @@ export const OwnerMenu = (isChecked, toggle) => ({
 })
 
 /** Add {key, text} from {value, label}. Does not remove keys. Mutates input. */
-export function toOfficeFabricModel(items) {
+export function toOfficeFabricModel(items: Array<any>): Array<IContextualMenuItem> {
     return items.map(i => itemToOfficeMenuModel(i))
 }
 
 /** Use (value,label) to create (key,text) if they don't exist. */
-export function itemToOfficeMenuModel(item) {
+export function itemToOfficeMenuModel(item): IContextualMenuItem {
     if (!item.key && item.value) item.key = item.value;
     if (!item.name && item.label) item.name = item.label;
     return item;
@@ -239,7 +242,8 @@ export function DefaultMenuItems(props): Array<IContextualMenuItem> {
  * Menus are not built if their needed properties (reference data & actions)
  * are not present. This function is intentionally designed to break
  * apart the state filter slice and call the APIs that require the
- * parameters explicitly.
+ * parameters explicitly. If not enough props are provided, individual
+ * items in the return object could be null.
  *
  * See `mapDispatchToProps` in this module to generate many of the "dispatch"
  * props needed in the props parameter e.g.
@@ -278,6 +282,7 @@ export function DefaultMenuItemsByMenu(props) {
     // Regarding would come from the entity id.
     const newActivityMenu = (props.filter && props.filter.types) ?
         NewActivityMenu(props.filter.types.filter(t => {
+            // huh? isn't this just !!t.allowNew
             if (typeof t.allowNew === "boolean") return t.allowNew
             return true
         }),

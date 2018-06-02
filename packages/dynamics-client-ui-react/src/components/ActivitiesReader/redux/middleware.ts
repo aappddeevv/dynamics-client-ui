@@ -165,8 +165,8 @@ function* requestEntities() {
 
 /**
  * Open a form. There is no real change in state, so this is more a process message request.
- *  Depending on the state, a quick create form can be used when the entity id is null
- *  and the state is set correctly.
+ * Depending on the state, a quick create form can be used when the entity id is null
+ * and the state is set correctly.
  */
 export function* openFormWatcher() {
     if (DEBUG) console.log("Open form watcher started.")
@@ -180,11 +180,13 @@ export function* openFormWatcher() {
         if (x && x.Utility) {
             const fn = defaultCreateActivityArgsBuilder
 
-            const { entityName, entityId, windowOptions, parameters, ...rest2 } =
-                fn(x, rest)
-            if (DEBUG) console.log("rest: ename,eid", entityName, entityId,
-                "wopts", windowOptions,
-                "p", parameters, "rest", rest2)
+            const { entityName, entityId, windowOptions, parameters, ...rest2 } = fn(x, rest)
+            if (DEBUG) console.log("openFormWatcher: computed parameters\nentityName", entityName,
+                "entityId", entityId,
+                "windowOptions", windowOptions,
+                "parameters", parameters,
+                "rest", rest2,
+                "useQuickCreateForm", useQuickCreateForm)
 
             x.Navigation.openForm({
                 entityName,

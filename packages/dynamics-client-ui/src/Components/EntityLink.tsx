@@ -9,7 +9,6 @@
  */
 
 import * as React from "react"
-const cx = require("classnames")
 import { /*withDynamics,*/ DynamicsContext } from "../Dynamics/Dynamics"
 import * as Comp from "../Dynamics/Compatibility"
 import { DEBUG } from "BuildSettings"
@@ -78,13 +77,20 @@ export const defaultHref = "#"
 /** Default render link function. Renders an anchor tag. */
 export function renderLink(props: EntityLinkRenderProps): JSX.Element {
     const allprops = { ...{ href: defaultHref }, ...props }
-    const { children, ...rest } = allprops
+    const { children, className, ...rest } = allprops
     return (
-        <a {...rest} >
+        <a className={className} {...rest} >
             {children}
         </a>)
 }
 
+/**
+ * Render an entity form link. Use `EntityURLLink.EntityFormLink` to create a link that
+ * automatically tries to use the same app and open in the same browser via a new tab.
+ * Using this component directly means it will open in the same browser tab or a new
+ * browser window which is not always the best experience. The context, explicit prop
+ * and the ye ol trick of `window.parent.Xrm` are all tried to obtain the Xrm instance.
+ */
 export class EntityLink extends React.Component<Props, any> {
 
     constructor(props: Props, context: any) {
@@ -101,7 +107,7 @@ export class EntityLink extends React.Component<Props, any> {
     protected handleClick = (e: any) => {
         if (this.props.onClick) this.props.onClick(e)
 
-        if (this.props.skipOpenForm && !!this.props.skipOpenForm) return
+        if (!!this.props.skipOpenForm) return
 
         const xrm: XRM = this.props.xrm || this.context.xrm || (window.parent.Xrm as XRM)
         if (!xrm) {
@@ -134,7 +140,7 @@ export class EntityLink extends React.Component<Props, any> {
         const { className, children } = this.props
         const renderProps = {
             ...this.props.anchorProps,
-            className: cx("crmLink", "ttg-EntityLink", className),
+            className: `crmLink ttg-EntityLink ${className}`,
             onClick: this.handleClick,
             children,
         }

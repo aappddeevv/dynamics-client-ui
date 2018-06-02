@@ -21,12 +21,14 @@ export function renderEntityFormLink(ename: string, id: string, value: React.Rea
   if (!!xrm) {
     // xrm.Page.context.getCurrentAppProperties().appId is buried in a promise which we cannot
     // handle at this point.
+    // do we need this now that we have getCurrentAppUrl
     const tryappid = getURLParameter("appid", window.parent.parent.location.search)
+    const appUrlFromXrm = xrm.Utility.getGlobalContext().getCurrentAppUrl()
     const url = catchNonFatal(() => makeOpenEntityFormURL({
       entityName: ename,
       entityId: id,
-      appId: tryappid ? tryappid : undefined,
-      baseURL: xrm.Utility.getGlobalContext().getClientUrl(),
+      appId: appUrlFromXrm ? undefined : tryappid,
+      baseURL: appUrlFromXrm || xrm.Utility.getGlobalContext().getClientUrl(),
     }))
     return (
       <EntityLink
@@ -60,18 +62,19 @@ export interface EntityFormLinkProps {
   entityName: string
   /** Dynamics id of entity to open. */
   id: string
-  /** Single child. We need to make this a general child thing... */
+  /** The content to show on the link. If not provided, "children" is used. */
   value?: React.ReactNode
-  /** Explicit Xrm Instance. */
+  /** Explicit Xrm Instance if you have it. Otherwise it trys to locate it. */
   xrm?: XRM | null
   /** Pass through props. */
   entityLinkProps?: Partial<ELProps>
 }
 
 /**
- * EntityLink that uses a hard URL link to open a form in a new
- * browser tab and allows you to right click.
+ * An `EntityLink` that uses a hard URL link to open a form in a new
+ * browser tab and allows you to right click on it (does it provide a context menu? check that).
  */
 export const EntityFormLink: React.SFC<EntityFormLinkProps> = (props) => {
-  return renderEntityFormLink(props.entityName, props.id, props.value || props.children, props.xrm, props.entityLinkProps)
+  return renderEntityFormLink(props.entityName, props.id, props.value || props.children,
+    props.xrm, props.entityLinkProps)
 }

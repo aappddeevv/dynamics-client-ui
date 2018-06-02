@@ -1,6 +1,7 @@
 import { IStyle } from "office-ui-fabric-react/lib/Styling"
 import { ActivityItem } from "../ActivitiesReader/datasources/datamodel"
 import * as moment from "moment"
+import { ControlPanelProps } from "./ControlPanel"
 
 export interface MSTP {
     events: Array<ActivityItem>
@@ -15,10 +16,15 @@ export interface MDTP {
 
 export interface OwnProps {
     className?: string | null
+
     styles?: ActivitiesCalendarComponentStyles
+
     /** Get classnames passed to ActivitiesCalendarComponent. */
-    getClassNames?:
-    (styles: ActivitiesCalendarComponentStyles) => ActivitiesCalendarComponentClassNames
+    getClassNames?: (styles: ActivitiesCalendarComponentStyles) => ActivitiesCalendarComponentClassNames
+
+    /** Props to pass directly to the ControlPanel. */
+    controlPanelProps?: Partial<ControlPanelProps>
+
     /** more stuff? like what? */
     [pname: string]: any
 }

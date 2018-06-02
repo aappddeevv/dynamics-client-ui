@@ -5,7 +5,9 @@ import { css } from "office-ui-fabric-react/lib/Utilities"
 import * as actions from "./redux/actions"
 import { SearchActions as SA } from "../ActivitiesReader/redux/actions"
 import UserSelection from "./UserSelection"
-import { ActivitiesHeader, ActivitiesHeaderRow } from "../ActivitiesReader/ActivitiesHeader"
+import {
+    ActivitiesHeader, ActivitiesHeaderRow, ActivitiesHeaderRowProps
+} from "../ActivitiesReader/ActivitiesHeader"
 import * as menus from "../ActivitiesReader/Menus"
 import { Pivot, PivotItem } from "office-ui-fabric-react/lib/Pivot"
 import { ActivityView } from "../ActivitiesReader/ActivityView"
@@ -36,7 +38,7 @@ const dispatchToProps = (dispatch: Dispatch<any>): MDTP => {
 
 export interface OwnProps {
     activity?: ActivityItem
-    menuItems?: Array<IContextualMenuItem>
+    headerProps?: Partial<ActivitiesHeaderRowProps>
     classNames: ControlPanelClassNames
 }
 
@@ -50,17 +52,11 @@ export interface ControlPanelClassNames {
 export type ControlPanelProps = OwnProps & MSTP & MDTP
 
 // tslint:disable-next-line:variable-name
-export const ControlPanel = ({ activity, classNames, menuItems, ...rest }: ControlPanelProps) => {
-    // If not overridden, add standard.
-    if (!menuItems) {
-        const { activityTypesMenu, statusTypesMenu } =
-            menus.DefaultMenuItemsByMenu(rest)
-        menuItems = [activityTypesMenu!, statusTypesMenu!]
-    }
+export const ControlPanel = ({ activity, classNames, headerProps, ...rest }: ControlPanelProps) => {
     return (
         <div className={classNames.root}>
-            <ActivitiesHeader className={"wasfystels.flexNone"}>
-                <ActivitiesHeaderRow {...rest} menuItems={menuItems} />
+            <ActivitiesHeader className={"fstyles.flexNone"}>
+                <ActivitiesHeaderRow {...rest} {...headerProps} />
             </ActivitiesHeader>
             <Pivot>styles
                 <PivotItem linkText="Detail">

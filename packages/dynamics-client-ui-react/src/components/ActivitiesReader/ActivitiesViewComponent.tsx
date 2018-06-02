@@ -10,7 +10,7 @@ import * as selectors from "./redux/selectors"
 import * as menus from "./Menus"
 import { CrmTable } from "@aappddeevv/dynamics-client-ui/lib/Components/CrmTable"
 import {
-    ActivitiesHeader, ActivitiesHeaderRow,
+    ActivitiesHeader, ActivitiesHeaderRow, ActivitiesHeaderRowProps,
 } from "./ActivitiesHeader"
 import { ActivityView, ActivityViewProps } from "./ActivityView"
 const styles = require("./styles.css")
@@ -102,45 +102,6 @@ export const defaultSortState: SortingState = {
     createdon: { direction: "desc", position: 0, },
 }
 
-/**
- * Return an object with the following
- * parameters needed for Xrm.Utilty.openEntityForm/Navigation.openForm: entityName, parameters,
- * windowOptions. You do not need id since you are creating a new activity.
- * Generally, it just needs entityName and some parameters to help fill in attributes.
- *
- * @param entityNameToCreate Name like "mail", or "letter" or "task".
- * @param props Props to derive the above parameters from.
- */
-export function defaultOpenFormArgs(isUci, entityNameToCreate, { entityId, entityTypeCode, entityName }) {
-    const parameters =
-        !isUci ?
-            ((entityNameToCreate === "annotation") ?
-                {
-                    pId: `{${entityId}}`,
-                    pType: entityTypeCode,
-                } :
-                {
-                    // these work on web client, but not uci
-                    regardingobjectid: `{${entityId}}`,
-                    regardingobjectidname: "name",
-                    regardingobjecttypecode: entityName,
-                }) :
-            ({
-                regardingobjectid: JSON.stringify({
-                    id: entityId,
-                    name: "Previous Record",
-                    entityType: entityName,
-                })
-            })
-    if (DEBUG) console.log("defaultOpenFormArgs",
-        entityNameToCreate, entityId, entityTypeCode, entityName, parameters)
-    return {
-        entityName: entityNameToCreate,
-        parameters,
-        windowOptions: { openInNewWindow: true, width: 1000, height: 1000 }
-    }
-}
-
 export interface MDTP {
     /** Only single select is allowed in the readers view. */
     onSelection: (id: string) => void
@@ -153,6 +114,8 @@ export const mapDispatchToProps = (dispatch): MDTP => {
         onSelection: id => dispatch(Actions.View.selectIds([id])),
         onSearchChange: (text) => dispatch(Actions.Search.changeSearchFilter(Actions.Search.setSearch(text))),
         createActivity: (entityNameToCreate, props) => dispatch(Actions.View.openForm({
+            ...props,
+            entityId: undefined, // wipe this out since we want a new "entityNameToCreate"
             entityName: entityNameToCreate,
             regardingEntity: {
                 name: "Related Entity",
@@ -199,27 +162,35 @@ export const mapStateToProps = (state, props): MSTP => {
 export interface DetailProps extends ActivityViewProps {
 }
 
+/** 
+ * Lots of props for the view. Children go into the header! 
+ * Can some of these go into the redux app state? For example, we may want
+ * to customize the menus in the header based on the currently selected 
+ * item.
+ */
 export interface OwnProps {
     className?: string | null
+
     /** Render the footer. */
     onRenderFooter?: IRenderFunction<FooterProps>
 
     /** Render the detail. Default is a summary header and the description beneath it. */
     onRenderDetail?: IRenderFunction<DetailProps>
 
-    /** Customizing this component may entail passing in unknown props. */
-    [pname: string]: any
-
-    // clean this up
-    additionalHeaderControls: any
-    // clean this up
-    headerRows: any
-
+    /** Callback for rendering the entire view. */
     onRender?: (header: JSX.Element, body: JSX.Element, footer: JSX.Element | null, props: object) => JSX.Element
+
+    /** Callback for rendering the master detail (= body). */
     onRenderMasterDetail?: (master: JSX.Element, detail: JSX.Element) => JSX.Element
 
     /** Columns, default is defaultColumns */
     columns?: Array<IColumn>
+
+    /** Props for creating the header row. Customize the menus through this property. */
+    headerProps?: Partial<ActivitiesHeaderRowProps>
+
+    /** Customizing this component may entail passing in many, many props especially for callbacks. */
+    [pname: string]: any
 }
 
 export type ActivitiesViewComponentProps = OwnProps & MSTP & MDTP
@@ -268,47 +239,28 @@ export class ActivitiesViewComponent extends React.Component<ActivitiesViewCompo
 
     public render() {
         let {
-            headerRows, additionalHeaderControls,
-            selector, header, detail,
             className, data,
             onSelection, selectedId, selectedActivity,
             onRenderFooter, onRenderDetail, onRenderMasterDetail,
+            headerProps,
             ...rest } = this.props
 
         data = data || []
-        // additionalHeaderControls = 
-        //     <React.Fragment>
-        //         <span>new x</span>
-        //         <span>new y</span>
-        //     </React.Fragment>
-        if (!header) {
-            let hRows: Array<JSX.Element> = [];
-            if (R.is(Function, headerRows)) {
-                //hRows = headerRows(this.withStore(rest));
-                hRows = headerRows(rest);
-            } else if (R.is(Array, headerRows)) {
-                hRows = headerRows as Array<JSX.Element>
-            } else {
-                // Translate createActivity to a callback that a menu item would understand.
-                let cprops: Record<string, any> = { ...this.props }
-                if (cprops.createActivity) {
-                    // createActivity is mapped to onNew()
-                    cprops.onNew = (objecttypecode, opt, e) => cprops.createActivity(objecttypecode, cprops)
-                }
-                hRows = [
-                    <ActivitiesHeaderRow key="headerRow" {...cprops}>
-                        {additionalHeaderControls}
-                    </ActivitiesHeaderRow>,
-                ]
-            }
-            header =
-                <ActivitiesHeader
-                    className={fstyles.flexNone}
-                >
-                    {hRows}
-                </ActivitiesHeader>
-            //header = makeCommandBarHeader({})
+        // Translate createActivity to a callback that a menu item would understand.
+        const cprops: Record<string, any> = { ...this.props }
+        if (cprops.createActivity) {
+            // createActivity is mapped to onNew()
+            cprops.onNew = (objecttypecode, opt, e) =>
+                cprops.createActivity(objecttypecode, { ...cprops, ...opt })
         }
+        const hRow = <ActivitiesHeaderRow key="headerRow" {...cprops} {...headerProps} />
+        const header =
+            <ActivitiesHeader
+                className={fstyles.flexNone}
+            >
+                {hRow}
+                {this.props.children}
+            </ActivitiesHeader>
 
         const master = <SortableDetailsList
             items={data}
@@ -330,12 +282,12 @@ export class ActivitiesViewComponent extends React.Component<ActivitiesViewCompo
             className: cx(fstyles.flexHalf, styles.detail),
             activity: selectedActivity,
         }
-        detail = onRenderDetail ?
+        const detail = onRenderDetail ?
             onRenderDetail(dprops, ActivityView) :
             ActivityView(dprops)
 
         const body = onRenderMasterDetail ?
-            onRenderMasterDetail(master, detail) :
+            onRenderMasterDetail(master, detail!) :
             <ActivitiesBody className={styles.body}>
                 {master}
                 {detail}
@@ -351,13 +303,13 @@ export class ActivitiesViewComponent extends React.Component<ActivitiesViewCompo
             this.props.onRenderFooter(fprops, Footer) :
             Footer(fprops)
 
-        const cprops = {
+        const allprops = {
             ["data-ctag"]: "ActivitesViewComponent",
             className: cx(fstyles.flexVertical, styles.component, className)
         }
         return this.props.onRender ?
-            this.props.onRender(header, body, footer, cprops) :
-            renderDefaultView(header, body, footer, cprops)
+            this.props.onRender(header, body, footer, allprops) :
+            renderDefaultView(header, body, footer, allprops)
     }
 }
 

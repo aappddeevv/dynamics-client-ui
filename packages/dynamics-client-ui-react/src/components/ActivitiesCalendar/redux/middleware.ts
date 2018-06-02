@@ -15,7 +15,7 @@ const moment = require("moment")
 import { DEBUG } from "BuildSettings"
 import {
     DAO, SagaFactoryContext, EnhancerFactory, FactoryContext,
-    combineSagaFactories,
+    combineSagaFactories, combineEnhancerFactories,
 } from "../../ActivitiesReader/datasources"
 import { activityPointerToItemModel } from "../../ActivitiesReader/redux/data"
 import { sagaFactory as stdSagaFactory, Actions as VActions } from "../../ActivitiesReader/redux"

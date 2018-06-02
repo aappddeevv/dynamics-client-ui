@@ -38,7 +38,6 @@
         "@types/chai": "^4.0.10",
         "@types/jest": "^22.0.0",
         "@types/prop-types": "^15.5.2",
-        "@types/ramda": "github:types/npm-ramda#dist",
         "@types/react": "^16.3.12",
         "@types/react-dom": "^16.0.5",
         "@types/react-redux": "^5.0.15",
@@ -95,7 +94,7 @@
         "tslint": "^5.8.0",
         "tslint-react": "^3.3.3",
         "typedoc": "^0.9.0",
-        "typescript": "^2.8.3",
+        "typescript": "^2.9.1",
         "typescript-formatter": "^7.1.0",
         "typings-for-css-modules-loader": "^1.7.0",
         "uglifyjs-webpack-plugin": "^1.1.5",
@@ -113,7 +112,7 @@
         "@types/node": "^8.5.2",
         "@types/react-select": "^1.1.0",
         "@types/xmldom": "^0.1.29",
-	"@types/recompose": "^0.26.0",
+	"@types/recompose": "^0.26.1",
         "@types/xrm": "^9.0.2"
     },
     "dependencies": {
@@ -135,7 +134,7 @@
         "moment": "^2.19.2",
         "monet": "^0.8.10",
         "normalizr": "^3.2.4",
-        "office-ui-fabric-react": "^5.112.0",
+        "office-ui-fabric-react": "^6.2.0",
         "prop-types": "^15.6.0",
         "randomcolor": "^0.5.3",
         "rc-tree": "^1.11.1",
@@ -163,10 +162,10 @@
         "selectabular": "^2.1.0",
         "sortabular": "^1.5.0",
         "tinycolor2": "^1.4.1",
-        "tslib": "^1.9.0",
+        "tslib": "^1.9.2",
         "xmldom": "^0.1.27",
         "xmlserializer": "^0.6.0",
-	"recompose": "^0.27.0",
+	"recompose": "^0.27.1",
 	        "react-content-loader": "^3.1.1",
 	"@aappddeevv/dynamics-client-ui": "^0.1.0-M1"
 

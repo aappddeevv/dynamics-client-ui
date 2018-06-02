@@ -11,10 +11,12 @@ import { Provider, connect } from "react-redux"
 import { createStore, applyMiddleware, compose, Store } from "redux"
 import { ActivitiesCalendarComponentR } from "./ActivitiesCalendarComponent"
 import {
-    CalendarViewActions as CalActions, enhancers, sagaFactory, init, reducers,
+    CalendarViewActions as CalActions, enhancers as defaultEnhancerFactory, sagaFactory, init, reducers,
 } from "./redux"
 import {
-    Actions as VActions, DAO, createSagas,
+    Actions as VActions, DAO, createSagas, SagaFactory,
+    combineEnhancerFactories, combineDataSourceFactories,
+    SagaFactoryContext, combineSagaFactories, EnhancerFactory
 } from "../ActivitiesReader"
 import * as Crm from "../ActivitiesReader/crm"
 import * as Utils from "../ActivitiesReader/datasources/Utils"
@@ -24,7 +26,8 @@ import {
 
 import Dynamics from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Dynamics"
 import { Fabric } from "office-ui-fabric-react/lib"
-import { combineReducers } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/combineReducers"
+import { combineReducers, Reducer3 } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/combineReducers"
+import { HOC } from "@aappddeevv/dynamics-client-ui/lib/react/component"
 import moment = require("moment")
 import { getXrmP } from "@aappddeevv/dynamics-client-ui/lib/Dynamics/Utils"
 import { Metadata } from "@aappddeevv/dynamics-client-ui/lib/Data"
@@ -74,7 +77,7 @@ export const defaultViewStyle: IStyle = {
     overflow: "hidden",
 }
 
-export interface RunProps {
+export interface ActivitiesCalendarRunProps {
     target: HTMLElement | null
     // not sure why this is here
     //entityId?: string | null
@@ -87,29 +90,48 @@ export interface RunProps {
     defaultView?: string
     /** Default date in a string format that moment.parse() understands. */
     defaultDate?: string
-    /** Initialize reference data override. Includes default init function. */
-    initReferenceData?:
-    (m: Metadata, n: Date, dateView: string, standardInit: InitReferenceData) => SagaIterator
+
+    /** 
+     * Initialize reference data override. Includes default init function which must be called. 
+     * The sagas are run before the component is mounted to reduce render performance issues.
+     */
+    initReferenceData?: (m: Metadata, n: Date, dateView: string, standardInit: InitReferenceData) => SagaIterator
+
     /** 
      * Though you could use initReferenceData to set activity types to display, you 
      * can use this filter more easily. =
      */
     activityTypeFilter?: ActivityTypeFilter
+
     /** Props passed to the calendar component. */
     calendarComponentProps?: Partial<ActivitiesCalendarComponentProps>
+
     /**
      * FIlter to include activities in the calendar. Returning yes to the logical name (in value) 
      * means show in calendar. NOT USED YET
      */
     activityFilter?: ActivityTypeFilter
+
     /** Client to use */
     client?: Client
+
+    /** Additional saga factory. */
+    sagaFactory?: SagaFactory
+
+    /** Additional reducers to add to the state.  */
+    reducer?: Record<string, Reducer3<any>>
+
+    /** Enhancer factory, combine with defaultEnhancerFactory. */
+    enhancerFactory?: EnhancerFactory
+
+    /** Enhance the final component with a higher order component. */
+    compose?: HOC<any>
 }
 
 export type InitReferenceData = (m: Metadata, n: Date, dateView: string) => SagaIterator
 export type ActivityTypeFilter = (activityType: { value: string }) => boolean
 
-/** saga to init reference data */
+/** Default saga to init reference data. */
 export function* initReferenceData(m: Metadata, n: Date, dateView: string,
     activityTypeFilter: ActivityTypeFilter): SagaIterator {
     // @ts-ignore
@@ -117,7 +139,7 @@ export function* initReferenceData(m: Metadata, n: Date, dateView: string,
     const atypes = ref.filter(activityTypeFilter)
     //const atypes = ref.filter(activityOnlyFilter)
     const sorted = R.sortBy(R.prop("label"), atypes) || []
-    if (DEBUG) console.log("activity types", sorted)
+    if (DEBUG) console.log("ActivitiesCalendar: activity types", sorted)
     yield put(VActions.Filter.activityTypes.SET_REFDATA(sorted))
     yield put(VActions.Filter.activityTypes.SET_ALL())
 
@@ -130,23 +152,27 @@ export function* initReferenceData(m: Metadata, n: Date, dateView: string,
 
 function renderIntoDOM(xrm: XRM, store: Store<any>, target: HTMLElement,
     props?: Partial<ActivitiesCalendarComponentProps>,
-    className: string | null = null, styles?: IStyle) {
+    className: string | null = null, hoc: HOC<any> = R.identity, styles?: IStyle) {
     const _className = mergeStyles(defaultViewStyle, className, styles)
+    const X = hoc(ActivitiesCalendarComponentR)
     render(
         <Fabric className={_className}>
             <Provider store={store}>
                 <Dynamics xrm={xrm}>
-                    <ActivitiesCalendarComponentR {...props} />
+                    <X {...props} />
                 </Dynamics>
             </Provider>
         </Fabric>,
         target)
 }
 
-export function run(props: RunProps) {
+export function run(props: ActivitiesCalendarRunProps) {
     const { target, userId, className, style, initReferenceData: initR,
         defaultDate, defaultView, calendarComponentProps, client: pclient,
+        sagaFactory: propsSagaFactory, reducer: propsReducer, compose,
+        enhancerFactory,
     } = props
+    if (!target) console.log("ActivitiesCalendar.run: target is not defined")
     getXrmP().then(xrm => {
         const uid = userId || xrm.Utility.getGlobalContext().getUserId()
         const n = defaultDate ? moment(defaultDate) : moment() // defaults to today
@@ -157,22 +183,25 @@ export function run(props: RunProps) {
         const dao = new DAO(client)
 
         const iprops = { client, dao, xrm, userId }
-        const isagas = sagaFactory(iprops)
+        ////////////////////////
+        const isagas = propsSagaFactory ? combineSagaFactories([sagaFactory, propsSagaFactory])(iprops) : sagaFactory(iprops)
         const dataSourcesP = CalendarFactory({ dao })
-        const enhancersP = enhancers({ client, dao })
+        const enhancersP = enhancerFactory ? enhancerFactory({ client, dao }) : defaultEnhancerFactory({ client, dao })
         const otherinitsagas = createSagas(enhancersP, dataSourcesP)
 
         // init data is contained in an effect
         return Promise.all([isagas, otherinitsagas]).then(inits => {
             const sagaMiddleware = createSagaMiddleware()
             const middlewares = [sagaMiddleware]
-            const store = createStore(combineReducers(reducers),
+            /////////////////////
+            const store = createStore(combineReducers({ ...reducers, ...propsReducer }),
                 composeEnhancers(applyMiddleware(...middlewares)))
             const effects = R.flatten(inits).map(f => call(f))
             sagaMiddleware.run(function* () { yield all(effects) })
             return [store, sagaMiddleware]
         }).
             then(tup => {
+                const hoc: HOC<any> = compose || R.identity
                 const store = tup[0] as Store<any>
                 const smiddle = tup[1] as SagaMiddleware<any>
                 smiddle.run(function* () {
@@ -186,11 +215,14 @@ export function run(props: RunProps) {
                             curriedInit(R.__, R.__, R.__, filter)) :
                         initReferenceData(metadata, n.toDate(), view, filter) // sequential
 
-                    yield call(init, { userId: (userId as string), xrm })
+                    yield call(init, { userId: uid as string, xrm })
                 })
                 return target !== null ?
-                    renderIntoDOM(xrm, store, target, calendarComponentProps, className, style) :
+                    renderIntoDOM(xrm, store, target, calendarComponentProps, className, hoc, style) :
                     null
+            })
+            .catch(e => {
+                console.log("ActivitiesCalendar initialization error", e)
             })
     })
 }

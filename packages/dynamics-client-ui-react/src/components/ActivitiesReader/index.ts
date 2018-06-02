@@ -1,4 +1,4 @@
 export * from "./ActivitiesViewComponent"
-import * as menus from "./Menus"
+export * from "./ActivitiesHeader"
 export * from "./redux"
 export * from "./datasources"
